@@ -1,13 +1,246 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="system">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Destr VPN</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
   <link rel="stylesheet" href="css/tg.css" />
   <style>
-    /* Home: no top title bar label */
+    /* ===== Login screens (эталон) ===== */
+    .login-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 0 16px;
+      background: var(--tg-theme-bg-color, var(--tg-bg));
+      transform: translateX(100%);
+      opacity: 0;
+      visibility: hidden;
+      transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+                  opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+                  visibility 0.32s;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .login-screen.active {
+      transform: translateX(0);
+      opacity: 1;
+      visibility: visible;
+    }
+    .login-screen.leaving-left {
+      transform: translateX(-30%);
+      opacity: 0;
+      visibility: hidden;
+    }
+    .login-screen.leaving-right {
+      transform: translateX(100%);
+      opacity: 0;
+      visibility: hidden;
+    }
+    .lottie-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 8px 0 0;
+      flex-shrink: 0;
+    }
+    .lottie-anim { width: 100px; height: 100px; }
+    .login-header {
+      text-align: center;
+      padding: 12px 8px 20px;
+    }
+    .login-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
+    }
+    .login-header p {
+      font-size: 15px;
+      line-height: 1.35;
+      color: var(--tg-theme-hint-color, var(--tg-hint));
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    .country-row {
+      display: flex;
+      align-items: center;
+      background: var(--tg-theme-section-bg-color, var(--tg-bg-secondary));
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .country-row:active { background: var(--tg-theme-secondary-bg-color, var(--tg-bg-secondary)); }
+    .country-flag { font-size: 28px; line-height: 1; margin-right: 14px; width: 32px; text-align: center; }
+    .country-name { flex: 1; font-size: 17px; }
+    .country-arrow { color: var(--tg-theme-hint-color, var(--tg-hint)); font-size: 18px; }
+    .phone-row {
+      display: flex;
+      align-items: center;
+      background: var(--tg-theme-section-bg-color, var(--tg-bg-secondary));
+      border-radius: 12px;
+      padding: 4px 16px;
+      height: 52px;
+      margin-bottom: 8px;
+    }
+    .phone-code {
+      font-size: 20px;
+      min-width: 42px;
+      margin-right: 8px;
+    }
+    .phone-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 20px;
+      color: var(--tg-theme-text-color, var(--tg-text));
+      height: 100%;
+      font-family: inherit;
+      min-width: 0;
+    }
+    .phone-input::placeholder { color: var(--tg-theme-hint-color, var(--tg-hint)); }
+    .error-text {
+      font-size: 14px;
+      color: var(--tg-theme-destructive-text-color, var(--tg-destructive));
+      padding: 4px 4px 0;
+      min-height: 22px;
+      display: none;
+    }
+    .error-text.visible { display: block; }
+    .login-bottom {
+      margin-top: auto;
+      padding: 16px 0 calc(16px + env(safe-area-inset-bottom));
+    }
+    .btn-login {
+      width: 100%;
+      height: 50px;
+      border: none;
+      border-radius: 12px;
+      background: var(--tg-theme-button-color, var(--tg-button));
+      color: var(--tg-theme-button-text-color, var(--tg-button-text));
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      font-family: inherit;
+      gap: 8px;
+    }
+    .btn-login:disabled { opacity: 0.45; }
+    .btn-login:not(:disabled):active { opacity: 0.85; }
+    .btn-login.secondary {
+      background: var(--tg-theme-secondary-bg-color, var(--tg-bg-secondary));
+      color: var(--tg-theme-link-color, var(--tg-link));
+      margin-top: 10px;
+    }
+    .btn-login .spinner {
+      display: none;
+      width: 22px;
+      height: 22px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      position: absolute;
+    }
+    .btn-login.loading .btn-text { visibility: hidden; }
+    .btn-login.loading .spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .link-back {
+      display: block;
+      width: 100%;
+      margin-top: 16px;
+      padding: 8px;
+      background: none;
+      border: none;
+      color: var(--tg-theme-link-color, var(--tg-link));
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: center;
+    }
+    .divider-or {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0 4px;
+      color: var(--tg-theme-hint-color, var(--tg-hint));
+      font-size: 13px;
+    }
+    .divider-or::before, .divider-or::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--tg-theme-section-separator-color, rgba(0,0,0,0.12));
+    }
+    .code-inputs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .code-digit {
+      width: 42px;
+      height: 52px;
+      border: none;
+      border-radius: 12px;
+      background: var(--tg-theme-secondary-bg-color, var(--tg-bg-secondary));
+      font-size: 24px;
+      font-weight: 500;
+      text-align: center;
+      color: var(--tg-theme-text-color, var(--tg-text));
+      outline: none;
+      caret-color: var(--tg-theme-button-color, var(--tg-button));
+      font-family: inherit;
+    }
+    .code-digit:focus {
+      box-shadow: 0 0 0 2px var(--tg-theme-button-color, var(--tg-button));
+    }
+    .resend {
+      text-align: center;
+      font-size: 15px;
+      color: var(--tg-theme-hint-color, var(--tg-hint));
+      margin-top: 8px;
+    }
+    .resend a {
+      color: var(--tg-theme-link-color, var(--tg-link));
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .password-row {
+      display: flex;
+      align-items: center;
+      background: var(--tg-theme-section-bg-color, var(--tg-bg-secondary));
+      border-radius: 12px;
+      padding: 4px 16px;
+      height: 52px;
+      margin-bottom: 12px;
+      border: 1.5px solid var(--tg-theme-button-color, var(--tg-button));
+    }
+    .password-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 17px;
+      color: var(--tg-theme-text-color, var(--tg-text));
+      height: 100%;
+      font-family: inherit;
+    }
+    .password-input::placeholder { color: var(--tg-theme-hint-color, var(--tg-hint)); }
+
+    /* Home top */
     .home-top {
       display: flex;
       justify-content: flex-end;
@@ -15,15 +248,10 @@
       min-height: 52px;
       padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 0;
     }
-    .home-top .icon-btn {
-      color: var(--tg-hint);
-    }
-    .home-top .icon-btn svg {
-      width: 26px;
-      height: 26px;
-    }
+    .home-top .icon-btn { color: var(--tg-hint); }
+    .home-top .icon-btn svg { width: 26px; height: 26px; }
 
-    /* PIN lock / setup */
+    /* PIN */
     .pin-screen-body {
       flex: 1;
       display: flex;
@@ -31,164 +259,208 @@
       align-items: center;
       padding: 24px 16px 12px;
     }
-    .pin-title {
-      margin: 12px 0 8px;
-      font-size: 20px;
-      font-weight: 600;
-      text-align: center;
-    }
-    .pin-hint {
-      font-size: 14px;
-      color: var(--tg-hint);
-      text-align: center;
-      margin-bottom: 28px;
-    }
-    .pin-cells {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      margin-bottom: 36px;
-    }
+    .pin-title { margin: 12px 0 8px; font-size: 20px; font-weight: 600; text-align: center; }
+    .pin-hint { font-size: 14px; color: var(--tg-hint); text-align: center; margin-bottom: 28px; }
+    .pin-cells { display: flex; gap: 12px; justify-content: center; margin-bottom: 36px; }
     .pin-cell {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 2px solid var(--tg-hint);
-      background: transparent;
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid var(--tg-hint); background: transparent;
       transition: background 0.12s, border-color 0.12s;
     }
-    .pin-cell.filled {
-      background: var(--tg-text);
-      border-color: var(--tg-text);
-    }
-    .pin-cell.error {
-      border-color: var(--tg-destructive);
-      background: var(--tg-destructive);
-    }
+    .pin-cell.filled { background: var(--tg-text); border-color: var(--tg-text); }
+    .pin-cell.error { border-color: var(--tg-destructive); background: var(--tg-destructive); }
     .pin-pad {
-      width: 100%;
-      max-width: 280px;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px 18px;
-      margin-top: auto;
-      margin-bottom: 24px;
+      width: 100%; max-width: 280px;
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px 18px; margin-top: auto; margin-bottom: 24px;
     }
     .pin-key {
-      height: 64px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      font-weight: 400;
-      background: var(--tg-bg-secondary);
-      color: var(--tg-text);
-      border: 0;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-      transition: opacity 0.12s, transform 0.08s;
+      height: 64px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 400;
+      background: var(--tg-bg-secondary); color: var(--tg-text);
+      border: 0; cursor: pointer; user-select: none;
     }
-    .pin-key:active {
-      opacity: 0.65;
-      transform: scale(0.96);
-    }
-    .pin-key.empty {
-      background: transparent;
-      pointer-events: none;
-    }
+    .pin-key:active { opacity: 0.65; transform: scale(0.96); }
     .pin-key.action {
-      background: transparent;
-      color: var(--tg-link);
-      font-size: 15px;
-      font-weight: 500;
+      background: transparent; color: var(--tg-link);
+      font-size: 15px; font-weight: 500;
     }
-    .pin-key.action svg {
-      width: 28px;
-      height: 28px;
-      color: var(--tg-text);
+    .pin-key.action svg { width: 28px; height: 28px; color: var(--tg-text); }
+
+    /* Country modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
+      opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0.25s;
     }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+    .modal {
+      position: absolute; bottom: 0; left: 0; right: 0; max-height: 85vh;
+      background: var(--tg-theme-bg-color, var(--tg-bg));
+      border-radius: 16px 16px 0 0;
+      display: flex; flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header {
+      padding: 12px 16px 8px; display: flex; align-items: center; gap: 12px;
+      border-bottom: 0.5px solid var(--tg-theme-section-separator-color, rgba(0,0,0,0.12));
+    }
+    .modal-search {
+      flex: 1; height: 36px; border: none; border-radius: 10px;
+      background: var(--tg-theme-secondary-bg-color, var(--tg-bg-secondary));
+      padding: 0 12px; font-size: 16px; outline: none; font-family: inherit;
+      color: var(--tg-theme-text-color, var(--tg-text));
+    }
+    .modal-close {
+      font-size: 16px; color: var(--tg-theme-link-color, var(--tg-link));
+      background: none; border: none; font-weight: 500; cursor: pointer; padding: 6px 4px;
+      font-family: inherit;
+    }
+    .modal-list { flex: 1; overflow-y: auto; }
+    .country-item {
+      display: flex; align-items: center; padding: 12px 16px; cursor: pointer;
+    }
+    .country-item:active { background: var(--tg-theme-secondary-bg-color, var(--tg-bg-secondary)); }
+    .country-item .flag { font-size: 26px; width: 36px; margin-right: 14px; text-align: center; }
+    .country-item .name { flex: 1; font-size: 17px; }
+    .country-item .code { font-size: 16px; color: var(--tg-theme-hint-color, var(--tg-hint)); }
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app" style="position:relative;height:100dvh;overflow:hidden">
+
+    <!-- ========== LOGIN: PHONE ========== -->
+    <div class="login-screen active" id="screen-phone">
+      <div class="lottie-wrap"><div class="lottie-anim" id="lottie-redphone"></div></div>
+      <div class="login-header">
+        <h1>Ваш номер телефона</h1>
+        <p>Пожалуйста, подтвердите код вашей страны и введите свой номер телефона.</p>
+      </div>
+      <div class="country-row" id="country-selector">
+        <div class="country-flag" id="current-flag">RU</div>
+        <div class="country-name" id="current-name">Россия</div>
+        <div class="country-arrow">›</div>
+      </div>
+      <div class="phone-row">
+        <div class="phone-code" id="phone-code">+7</div>
+        <input type="tel" class="phone-input" id="phone-input" inputmode="numeric" autocomplete="tel" />
+      </div>
+      <div class="error-text" id="phone-error"></div>
+      <div class="login-bottom">
+        <button class="btn-login" id="btn-continue" disabled>
+          <span class="btn-text">Продолжить</span>
+          <div class="spinner"></div>
+        </button>
+        <div class="divider-or">или</div>
+        <button type="button" class="btn-login secondary" id="btn-tg-login">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+          </svg>
+          <span class="btn-text">Войти через Telegram</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========== LOGIN: CODE ========== -->
+    <div class="login-screen" id="screen-code">
+      <div class="lottie-wrap"><div class="lottie-anim" id="lottie-message"></div></div>
+      <div class="login-header">
+        <h1>Введите код</h1>
+        <p>Мы отправили код подтверждения. Проверьте @VerificationCodes и номер <b id="sent-phone"></b></p>
+      </div>
+      <div class="code-inputs" id="code-inputs">
+        <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="0">
+        <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="1">
+        <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="2">
+        <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="3">
+        <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="4">
+        <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="5">
+      </div>
+      <div class="error-text" id="code-error" style="text-align:center"></div>
+      <div class="resend" id="resend-block">Отправить код повторно через <span id="timer">60</span> сек</div>
+      <div class="login-bottom">
+        <button class="btn-login" id="btn-verify" disabled>
+          <span class="btn-text">Подтвердить</span>
+          <div class="spinner"></div>
+        </button>
+        <button class="link-back" id="btn-back-phone">Назад</button>
+      </div>
+    </div>
+
+    <!-- ========== LOGIN: 2FA ========== -->
+    <div class="login-screen" id="screen-2fa">
+      <div class="lottie-wrap"><div class="lottie-anim" id="lottie-2fa"></div></div>
+      <div class="login-header">
+        <h1>Защитите аккаунт</h1>
+        <p>Придумайте пароль для двухфакторной аутентификации. Он понадобится при следующем входе.</p>
+      </div>
+      <div class="password-row">
+        <input type="password" class="password-input" id="password-1" placeholder="Придумайте пароль" autocomplete="new-password">
+      </div>
+      <div class="password-row">
+        <input type="password" class="password-input" id="password-2" placeholder="Повторите пароль" autocomplete="new-password">
+      </div>
+      <div class="error-text" id="password-error" style="text-align:center"></div>
+      <div class="login-bottom">
+        <button class="btn-login" id="btn-2fa-continue" disabled>
+          <span class="btn-text">Продолжить</span>
+          <div class="spinner"></div>
+        </button>
+        <button class="link-back" id="btn-2fa-skip">Пропустить</button>
+      </div>
+    </div>
 
     <!-- ========== HOME ========== -->
-    <section id="screen-home" class="screen active">
+    <section id="screen-home" class="screen">
       <div class="home-top">
         <button type="button" class="icon-btn" id="btn-open-settings" aria-label="Настройки" data-haptic="light">
-          <!-- gear SVG (refined) -->
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
             <path d="M19.4 13.1a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V19a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H5a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H10a1.7 1.7 0 0 0 1-1.5V5a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V10c.1.6.6 1.1 1.3 1.2H19a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z"/>
           </svg>
         </button>
       </div>
-
       <div class="screen-body">
         <div class="card" id="sub-card">
           <p class="card-title">На имя</p>
           <h2 class="card-name" id="sub-name">Иван Петров</h2>
-
           <div class="card-stats">
             <div class="stat">
               <div class="stat-label">Трафик</div>
-              <div class="stat-value" id="sub-traffic">42 / 100 ГБ</div>
+              <div class="stat-value">42 / 100 ГБ</div>
             </div>
             <div class="stat">
               <div class="stat-label">Срок</div>
-              <div class="stat-value" id="sub-expiry">до 15.12.2026</div>
+              <div class="stat-value">до 15.12.2026</div>
             </div>
           </div>
-
           <div class="progress">
-            <div class="progress-track">
-              <div class="progress-fill" id="sub-progress" style="width:42%"></div>
-            </div>
-            <div class="progress-meta">
-              <span>Использовано 42%</span>
-              <span>осталось 58 ГБ</span>
-            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:42%"></div></div>
+            <div class="progress-meta"><span>Использовано 42%</span><span>осталось 58 ГБ</span></div>
           </div>
         </div>
-
-        <div class="empty hidden" id="sub-empty">
-          <div class="empty-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"/>
-              <path d="M12 9v4M12 16h.01"/>
-            </svg>
-          </div>
-          <h2 class="empty-title">Нет подписки</h2>
-          <p class="empty-text">Подписка появится здесь, когда администратор её выдаст</p>
-        </div>
-
         <div class="section">
           <div class="section-label">Устройства</div>
           <div class="cell-group">
             <div class="cell">
               <div class="cell-icon blue">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="6" y="3" width="12" height="18" rx="2"/>
-                  <path d="M11 17h2"/>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 17h2"/></svg>
               </div>
               <div class="cell-body">
                 <div class="cell-title">Добавлено устройств</div>
                 <div class="cell-subtitle">лимит по тарифу</div>
               </div>
-              <div class="cell-value" id="device-count">1 / 3</div>
+              <div class="cell-value">1 / 3</div>
             </div>
           </div>
         </div>
       </div>
-
       <div class="bottom-bar">
         <button type="button" class="btn btn-primary" id="btn-add-device" data-haptic="medium">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
           Добавить устройство
         </button>
       </div>
@@ -198,132 +470,72 @@
     <section id="screen-settings" class="screen">
       <header class="header">
         <div class="header-side">
-          <button type="button" class="icon-btn" id="btn-back-home" aria-label="Назад" data-haptic="light">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
+          <button type="button" class="icon-btn" id="btn-back-home" data-haptic="light">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
         </div>
         <div class="header-title">Настройки</div>
         <div class="header-side"></div>
       </header>
-
       <div class="screen-body">
         <div class="section">
           <div class="section-label">Оформление</div>
           <div class="cell-group">
             <button type="button" class="cell" data-theme-set="system" data-haptic="selection">
-              <div class="cell-icon gray">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="14" rx="2"/>
-                  <path d="M8 21h8M12 18v3"/>
-                </svg>
-              </div>
+              <div class="cell-icon gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
               <div class="cell-body"><div class="cell-title">Системная</div></div>
-              <div class="cell-value theme-check" data-check="system">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-button)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-              </div>
+              <div class="cell-value theme-check" data-check="system"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-button)" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
             </button>
             <button type="button" class="cell" data-theme-set="light" data-haptic="selection">
-              <div class="cell-icon orange">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="4"/>
-                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-                </svg>
-              </div>
+              <div class="cell-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></div>
               <div class="cell-body"><div class="cell-title">Светлая</div></div>
-              <div class="cell-value theme-check hidden" data-check="light">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-button)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-              </div>
+              <div class="cell-value theme-check hidden" data-check="light"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-button)" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
             </button>
             <button type="button" class="cell" data-theme-set="dark" data-haptic="selection">
-              <div class="cell-icon purple">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 14.5A8.5 8.5 0 1110.5 3a7 7 0 0010.5 11.5z"/>
-                </svg>
-              </div>
+              <div class="cell-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 14.5A8.5 8.5 0 1110.5 3a7 7 0 0010.5 11.5z"/></svg></div>
               <div class="cell-body"><div class="cell-title">Тёмная</div></div>
-              <div class="cell-value theme-check hidden" data-check="dark">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-button)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-              </div>
+              <div class="cell-value theme-check hidden" data-check="dark"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-button)" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
             </button>
           </div>
         </div>
-
         <div class="section">
           <div class="section-label">Безопасность</div>
           <div class="cell-group">
             <button type="button" class="cell" id="btn-set-pin" data-haptic="light">
-              <div class="cell-icon blue">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="5" y="11" width="14" height="10" rx="2"/>
-                  <path d="M8 11V8a4 4 0 018 0v3"/>
-                </svg>
-              </div>
-              <div class="cell-body">
-                <div class="cell-title">Код-пароль</div>
-                <div class="cell-subtitle">необязательно</div>
-              </div>
+              <div class="cell-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></div>
+              <div class="cell-body"><div class="cell-title">Код-пароль</div><div class="cell-subtitle">необязательно</div></div>
               <div class="cell-value" id="pin-status">Выкл</div>
               <svg class="cell-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
             </button>
             <div class="cell">
-              <div class="cell-icon green">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2a5 5 0 015 5v1"/>
-                  <rect x="5" y="9" width="14" height="11" rx="2"/>
-                  <circle cx="12" cy="14.5" r="1.5"/>
-                </svg>
-              </div>
-              <div class="cell-body">
-                <div class="cell-title">Face ID</div>
-                <div class="cell-subtitle">разблокировка приложения</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="toggle-faceid" />
-                <span class="switch-track"><span class="switch-thumb"></span></span>
-              </label>
+              <div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 015 5v1"/><rect x="5" y="9" width="14" height="11" rx="2"/><circle cx="12" cy="14.5" r="1.5"/></svg></div>
+              <div class="cell-body"><div class="cell-title">Face ID</div><div class="cell-subtitle">разблокировка приложения</div></div>
+              <label class="switch"><input type="checkbox" id="toggle-faceid" /><span class="switch-track"><span class="switch-thumb"></span></span></label>
             </div>
           </div>
         </div>
-
         <div class="section">
           <div class="cell-group">
             <button type="button" class="cell" id="btn-logout" data-haptic="warning">
-              <div class="cell-icon red">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-                  <path d="M16 17l5-5-5-5M21 12H9"/>
-                </svg>
-              </div>
-              <div class="cell-body">
-                <div class="cell-title" style="color: var(--tg-destructive)">Выйти</div>
-              </div>
+              <div class="cell-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></div>
+              <div class="cell-body"><div class="cell-title" style="color:var(--tg-destructive)">Выйти</div></div>
             </button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ========== PIN SETUP / LOCK ========== -->
+    <!-- ========== PIN ========== -->
     <section id="screen-pin" class="screen">
       <div class="pin-screen-body">
         <div style="margin-top:40px;color:var(--tg-button)">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="11" width="14" height="10" rx="2"/>
-            <path d="M8 11V8a4 4 0 018 0v3"/>
-          </svg>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
         </div>
         <h2 class="pin-title" id="pin-title">Придумайте код</h2>
         <p class="pin-hint" id="pin-hint">4 цифры для входа в приложение</p>
-
-        <div class="pin-cells" id="pin-cells" aria-hidden="true">
-          <div class="pin-cell" data-i="0"></div>
-          <div class="pin-cell" data-i="1"></div>
-          <div class="pin-cell" data-i="2"></div>
-          <div class="pin-cell" data-i="3"></div>
+        <div class="pin-cells" id="pin-cells">
+          <div class="pin-cell"></div><div class="pin-cell"></div><div class="pin-cell"></div><div class="pin-cell"></div>
         </div>
-
         <div class="pin-pad" id="pin-pad">
           <button type="button" class="pin-key" data-key="1">1</button>
           <button type="button" class="pin-key" data-key="2">2</button>
@@ -334,41 +546,25 @@
           <button type="button" class="pin-key" data-key="7">7</button>
           <button type="button" class="pin-key" data-key="8">8</button>
           <button type="button" class="pin-key" data-key="9">9</button>
-          <button type="button" class="pin-key action" id="pin-cancel" data-key="cancel">Отмена</button>
+          <button type="button" class="pin-key action" data-key="cancel">Отмена</button>
           <button type="button" class="pin-key" data-key="0">0</button>
           <button type="button" class="pin-key action" data-key="del" aria-label="Удалить">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12H8M12 7l-5 5 5 5"/>
-              <path d="M4 6v12"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12H8M12 7l-5 5 5 5"/><path d="M4 6v12"/></svg>
           </button>
         </div>
       </div>
     </section>
 
-    <!-- ========== ADMIN (preview) ========== -->
-    <section id="screen-admin" class="screen">
-      <header class="header">
-        <div class="header-side"></div>
-        <div class="header-title">Админ</div>
-        <div class="header-side">
-          <button type="button" class="icon-btn" id="btn-admin-close" data-haptic="light">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
-      </header>
-      <div class="screen-body">
-        <div class="section">
-          <div class="section-label">Действия</div>
-          <div class="cell-group">
-            <button type="button" class="cell" data-haptic="light"><div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></div><div class="cell-body"><div class="cell-title">Создать подписку</div></div></button>
-            <button type="button" class="cell" data-haptic="light"><div class="cell-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><div class="cell-body"><div class="cell-title">Редактировать</div></div></button>
-            <button type="button" class="cell" data-haptic="warning"><div class="cell-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 8l8 8"/></svg></div><div class="cell-body"><div class="cell-title">Заблокировать</div></div></button>
-          </div>
-        </div>
-      </div>
-    </section>
+  </div>
 
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <input type="text" class="modal-search" id="search" placeholder="Поиск" autocomplete="off">
+        <button class="modal-close" id="modal-close">Готово</button>
+      </div>
+      <div class="modal-list" id="country-list"></div>
+    </div>
   </div>
 
   <div class="overlay" id="sheet-device">
