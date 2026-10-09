@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>DxS Connect</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+  <style>
+    :root {
+      --tg-theme-bg-color: #ffffff;
+      --tg-theme-secondary-bg-color: #f4f4f5;
+      --tg-theme-text-color: #000000;
+      --tg-theme-hint-color: #8e8e93;
+      --tg-theme-button-color: #3390ec;
+      --tg-theme-button-text-color: #ffffff;
+      --tg-theme-section-bg-color: #ffffff;
+      --tg-theme-section-header-text-color: #6d6d72;
+      --tg-theme-section-separator-color: #c8c7cc;
+      --tg-theme-link-color: #3390ec;
+      --tg-theme-destructive-text-color: #ff3b30;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--tg-theme-bg-color);
+      color: var(--tg-theme-text-color);
+      overflow: hidden;
+      /* lock zoom */
+      touch-action: manipulation;
+      -ms-touch-action: manipulation;
+    }
+    body {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+    input, textarea, button, select {
+      font-size: 16px; /* prevents iOS input zoom */
+    }
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 0 16px;
+      background: var(--tg-theme-bg-color);
+      transform: translateX(100%);
+      opacity: 0;
+      visibility: hidden;
+      transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+                  opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+                  visibility 0.32s;
+      will-change: transform, opacity;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
+    .screen.active {
+      transform: translateX(0);
+      opacity: 1;
+      visibility: visible;
+    }
+    .screen.leaving-right {
+      transform: translateX(100%);
+      opacity: 0;
+      visibility: hidden;
+    }
+    .screen.leaving-left {
+      transform: translateX(-30%);
+      opacity: 0;
+      visibility: hidden;
+    }
+    .lottie-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 8px 0 0;
+      flex-shrink: 0;
+    }
+    .lottie-anim {
+      width: 100px;
+      height: 100px;
+    }
+    .lottie-anim:empty::before {
+      content: "";
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .header {
+      text-align: center;
+      padding: 12px 8px 20px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
+    }
+    .header p {
+      font-size: 15px;
+      line-height: 1.35;
+      color: var(--tg-theme-hint-color);
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    .country-row {
+      display: flex;
+      align-items: center;
+      background: var(--tg-theme-section-bg-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .country-row:active {
+      background: var(--tg-theme-secondary-bg-color);
+    }
+    .country-flag {
+      font-size: 28px;
+      line-height: 1;
+      margin-right: 14px;
+      width: 32px;
+      text-align: center;
+    }
+    .country-name {
+      flex: 1;
+      font-size: 17px;
+      font-weight: 400;
+    }
+    .country-arrow {
+      color: var(--tg-theme-hint-color);
+      font-size: 18px;
+      font-weight: 300;
+    }
+    .phone-row {
+      display: flex;
+      align-items: center;
+      background: var(--tg-theme-section-bg-color);
+      border-radius: 12px;
+      padding: 4px 16px;
+      height: 52px;
+      margin-bottom: 8px;
+    }
+    .phone-code {
+      font-size: 20px;
+      font-weight: 400;
+      min-width: 42px;
+      margin-right: 8px;
+      color: var(--tg-theme-text-color);
+    }
+    .phone-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 20px;
+      color: var(--tg-theme-text-color);
+      letter-spacing: 0.3px;
+      height: 100%;
+      font-family: inherit;
+      min-width: 0;
+    }
+    .phone-input::placeholder {
+      color: var(--tg-theme-hint-color);
+      letter-spacing: 0;
+    }
+    .error-text {
+      font-size: 14px;
+      color: var(--tg-theme-destructive-text-color);
+      padding: 4px 4px 0;
+      min-height: 22px;
+      display: none;
+    }
+    .error-text.visible {
+      display: block;
+    }
+    .bottom {
+      margin-top: auto;
+      padding: 16px 0 calc(16px + env(safe-area-inset-bottom));
+    }
+    .btn {
+      width: 100%;
+      height: 50px;
+      border: none;
+      border-radius: 12px;
+      background: var(--tg-theme-button-color);
+      color: var(--tg-theme-button-text-color);
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+      position: relative;
+      font-family: inherit;
+    }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .btn:not(:disabled):active {
+      opacity: 0.85;
+    }
+    .btn.secondary {
+      background: var(--tg-theme-secondary-bg-color);
+      color: var(--tg-theme-link-color);
+      margin-top: 10px;
+    }
+    .btn .spinner {
+      display: none;
+      width: 22px;
+      height: 22px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .btn.loading .btn-text {
+      visibility: hidden;
+    }
+    .btn.loading .spinner {
+      display: block;
+      position: absolute;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .divider-or {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0 4px;
+      color: var(--tg-theme-hint-color);
+      font-size: 13px;
+    }
+    .divider-or::before,
+    .divider-or::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--tg-theme-section-separator-color);
+    }
+    .link-back {
+      display: block;
+      width: 100%;
+      margin-top: 16px;
+      padding: 8px;
+      background: none;
+      border: none;
+      color: var(--tg-theme-link-color);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: center;
+    }
+    .link-back:active {
+      opacity: 0.6;
+    }
+    .code-inputs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .code-digit {
+      width: 42px;
+      height: 52px;
+      border: none;
+      border-radius: 12px;
+      background: var(--tg-theme-secondary-bg-color);
+      font-size: 24px;
+      font-weight: 500;
+      text-align: center;
+      color: var(--tg-theme-text-color);
+      outline: none;
+      caret-color: var(--tg-theme-button-color);
+      font-family: inherit;
+      min-width: 0;
+    }
+    .code-digit:focus {
+      background: var(--tg-theme-section-bg-color);
+      box-shadow: 0 0 0 2px var(--tg-theme-button-color);
+    }
+    .resend {
+      text-align: center;
+      font-size: 15px;
+      color: var(--tg-theme-hint-color);
+      margin-top: 8px;
+    }
+    .resend a {
+      color: var(--tg-theme-link-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .password-row {
+      display: flex;
+      align-items: center;
+      background: var(--tg-theme-section-bg-color);
+      border-radius: 12px;
+      padding: 4px 16px;
+      height: 52px;
+      margin-bottom: 12px;
+      border: 1.5px solid var(--tg-theme-button-color);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .password-row:last-of-type {
+      margin-bottom: 8px;
+    }
+    .password-row:focus-within {
+      border-color: var(--tg-theme-button-color);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--tg-theme-button-color) 18%, transparent);
+    }
+    .password-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 17px;
+      color: var(--tg-theme-text-color);
+      height: 100%;
+      font-family: inherit;
+      min-width: 0;
+      letter-spacing: 0.5px;
+    }
+    .password-input::placeholder {
+      color: var(--tg-theme-hint-color);
+      letter-spacing: 0;
+    }
+
+    /* ===== HOME (cabinet) ===== */
+    .home-top {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      min-height: 48px;
+      padding: 8px 0 0;
+      flex-shrink: 0;
+    }
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: none;
+      color: var(--tg-theme-hint-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+    .icon-btn:active { opacity: 0.55; }
+    .icon-btn svg { width: 26px; height: 26px; }
+    .card {
+      background: var(--tg-theme-secondary-bg-color);
+      border-radius: 18px;
+      padding: 20px 18px;
+      margin-top: 8px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--tg-theme-hint-color);
+    }
+    .card-name {
+      margin: 6px 0 0;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+    }
+    .card-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .stat {
+      background: var(--tg-theme-bg-color);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--tg-theme-hint-color);
+    }
+    .stat-value {
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    .progress { margin-top: 16px; }
+    .progress-track {
+      height: 6px;
+      border-radius: 100px;
+      background: var(--tg-theme-bg-color);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: var(--tg-theme-button-color);
+      width: 42%;
+    }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--tg-theme-hint-color);
+    }
+    .section { margin-top: 24px; }
+    .section-label {
+      margin: 0 4px 8px;
+      font-size: 13px;
+      color: var(--tg-theme-section-header-text-color);
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+    .cell-group {
+      background: var(--tg-theme-secondary-bg-color);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 48px;
+      padding: 11px 16px;
+      position: relative;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      border: none;
+      font-family: inherit;
+      color: inherit;
+      cursor: pointer;
+    }
+    .cell + .cell::before {
+      content: "";
+      position: absolute;
+      left: 16px;
+      right: 0;
+      top: 0;
+      height: 0.5px;
+      background: var(--tg-theme-section-separator-color);
+    }
+    .cell:active {
+      background: color-mix(in srgb, var(--tg-theme-hint-color) 12%, transparent);
+    }
+    .cell-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #fff;
+    }
+    .cell-icon svg { width: 18px; height: 18px; }
+    .cell-icon.blue { background: #007aff; }
+    .cell-icon.gray { background: #8e8e93; }
+    .cell-icon.green { background: #34c759; }
+    .cell-icon.orange { background: #ff9500; }
+    .cell-icon.red { background: #ff3b30; }
+    .cell-icon.purple { background: #af52de; }
+    .cell-body { flex: 1; min-width: 0; }
+    .cell-title { font-size: 17px; }
+    .cell-subtitle { margin-top: 2px; font-size: 14px; color: var(--tg-theme-hint-color); }
+    .cell-value { font-size: 17px; color: var(--tg-theme-hint-color); flex-shrink: 0; }
+    .cell-chevron {
+      width: 16px; height: 16px;
+      color: var(--tg-theme-hint-color);
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .bottom-bar {
+      margin-top: auto;
+      padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+      flex-shrink: 0;
+    }
+    .nav-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 48px;
+      padding: 8px 0;
+      flex-shrink: 0;
+    }
+    .nav-header-title {
+      font-size: 17px;
+      font-weight: 600;
+      flex: 1;
+      text-align: center;
+    }
+    .nav-header-side { width: 40px; }
+
+    /* PIN */
+    .pin-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 0 12px;
+    }
+    .pin-title { margin: 12px 0 8px; font-size: 20px; font-weight: 600; text-align: center; }
+    .pin-hint { font-size: 14px; color: var(--tg-theme-hint-color); text-align: center; margin-bottom: 28px; }
+    .pin-cells { display: flex; gap: 12px; justify-content: center; margin-bottom: 36px; }
+    .pin-cell {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid var(--tg-theme-hint-color);
+      background: transparent;
+    }
+    .pin-cell.filled {
+      background: var(--tg-theme-text-color);
+      border-color: var(--tg-theme-text-color);
+    }
+    .pin-cell.error {
+      border-color: var(--tg-theme-destructive-text-color);
+      background: var(--tg-theme-destructive-text-color);
+    }
+    .pin-pad {
+      width: 100%;
+      max-width: 280px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px 18px;
+      margin-top: auto;
+      margin-bottom: 16px;
+    }
+    .pin-key {
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      background: var(--tg-theme-secondary-bg-color);
+      color: var(--tg-theme-text-color);
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      user-select: none;
+    }
+    .pin-key:active { opacity: 0.65; transform: scale(0.96); }
+    .pin-key.action {
+      background: transparent;
+      color: var(--tg-theme-link-color);
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .pin-key.action svg { width: 28px; height: 28px; color: var(--tg-theme-text-color); }
+
+    .switch {
+      position: relative;
+      width: 51px;
+      height: 31px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 100px;
+      background: #e5e5ea;
+      transition: background 0.2s;
+    }
+    .switch-thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 27px; height: 27px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    .switch input:checked + .switch-track { background: #34c759; }
+    .switch input:checked + .switch-track .switch-thumb { transform: translateX(20px); }
+
+    .sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s, visibility 0.25s;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .sheet-overlay.open { opacity: 1; visibility: visible; }
+    .sheet {
+      width: 100%;
+      max-width: 480px;
+      background: var(--tg-theme-bg-color);
+      border-radius: 16px 16px 0 0;
+      padding: 12px 16px calc(20px + env(safe-area-inset-bottom));
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .sheet-overlay.open .sheet { transform: translateY(0); }
+    .sheet-handle {
+      width: 36px; height: 4px; border-radius: 100px;
+      background: var(--tg-theme-section-separator-color);
+      margin: 0 auto 16px;
+    }
+    .sheet-title {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .sheet-text {
+      text-align: center;
+      font-size: 15px;
+      color: var(--tg-theme-hint-color);
+      margin-bottom: 16px;
+    }
+
+    /* Modal country */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s, visibility 0.25s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 85vh;
+      background: var(--tg-theme-bg-color);
+      border-radius: 16px 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+    .modal-header {
+      padding: 12px 16px 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 0.5px solid var(--tg-theme-section-separator-color);
+    }
+    .modal-search {
+      flex: 1;
+      height: 36px;
+      border: none;
+      border-radius: 10px;
+      background: var(--tg-theme-secondary-bg-color);
+      padding: 0 12px;
+      font-size: 16px;
+      color: var(--tg-theme-text-color);
+      outline: none;
+      font-family: inherit;
+    }
+    .modal-search::placeholder {
+      color: var(--tg-theme-hint-color);
+    }
+    .modal-close {
+      font-size: 16px;
+      color: var(--tg-theme-link-color);
+      background: none;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 6px 4px;
+      font-family: inherit;
+    }
+    .modal-list {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .country-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .country-item:active {
+      background: var(--tg-theme-secondary-bg-color);
+    }
+    .country-item .flag {
+      font-size: 26px;
+      width: 36px;
+      margin-right: 14px;
+      text-align: center;
+    }
+    .country-item .name {
+      flex: 1;
+      font-size: 17px;
+    }
+    .country-item .code {
+      font-size: 16px;
+      color: var(--tg-theme-hint-color);
+    }
+    .no-results {
+      padding: 40px 16px;
+      text-align: center;
+      color: var(--tg-theme-hint-color);
+      font-size: 16px;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- SCREEN 1: Phone -->
+  <div class="screen active" id="screen-phone">
+    <div class="lottie-wrap">
+      <div class="lottie-anim" id="lottie-redphone"></div>
+    </div>
+    <div class="header">
+      <h1>Ваш номер телефона</h1>
+      <p>Пожалуйста, подтвердите код вашей страны и введите свой номер телефона.</p>
+    </div>
+    <div class="country-row" id="country-selector">
+      <div class="country-flag" id="current-flag">🇷🇺</div>
+      <div class="country-name" id="current-name">Россия</div>
+      <div class="country-arrow">›</div>
+    </div>
+    <div class="phone-row">
+      <div class="phone-code" id="phone-code">+7</div>
+      <input type="tel" class="phone-input" id="phone-input" placeholder="" inputmode="numeric" autocomplete="tel">
+    </div>
+    <div class="error-text" id="phone-error"></div>
+    <div class="bottom">
+      <button class="btn" id="btn-continue" disabled>
+        <span class="btn-text">Продолжить</span>
+        <div class="spinner"></div>
+      </button>
+      <div class="divider-or">или</div>
+      <button type="button" class="btn secondary" id="btn-tg-login">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+        </svg>
+        <span class="btn-text">Войти через Telegram</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: Code -->
+  <div class="screen" id="screen-code">
+    <div class="lottie-wrap">
+      <div class="lottie-anim" id="lottie-message"></div>
+    </div>
+    <div class="header">
+      <h1>Введите код</h1>
+      <p id="code-subtitle">Мы отправили SMS с кодом подтверждения на номер <b id="sent-phone"></b></p>
+    </div>
+    <div class="code-inputs" id="code-inputs">
+      <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="0">
+      <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="1">
+      <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="2">
+      <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="3">
+      <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="4">
+      <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="5">
+    </div>
+    <div class="error-text" id="code-error" style="text-align:center"></div>
+    <div class="resend" id="resend-block">
+      Отправить код повторно через <span id="timer">60</span> сек
+    </div>
+    <div class="bottom">
+      <button class="btn" id="btn-verify" disabled>
+        <span class="btn-text">Подтвердить</span>
+        <div class="spinner"></div>
+      </button>
+      <button class="link-back" id="btn-back-phone">Назад</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: 2FA setup -->
+  <div class="screen" id="screen-2fa">
+    <div class="lottie-wrap">
+      <div class="lottie-anim" id="lottie-2fa"></div>
+    </div>
+    <div class="header">
+      <h1>Защитите аккаунт</h1>
+      <p>Придумайте пароль для двухфакторной аутентификации. Он понадобится при следующем входе.</p>
+    </div>
+    <div class="password-row">
+      <input type="password" class="password-input" id="password-1" placeholder="Придумайте пароль" autocomplete="new-password">
+    </div>
+    <div class="password-row">
+      <input type="password" class="password-input" id="password-2" placeholder="Повторите пароль" autocomplete="new-password">
+    </div>
+    <div class="error-text" id="password-error" style="text-align:center"></div>
+    <div class="bottom">
+      <button class="btn" id="btn-2fa-continue" disabled>
+        <span class="btn-text">Продолжить</span>
+        <div class="spinner"></div>
+      </button>
+      <button class="link-back" id="btn-2fa-skip">Пропустить</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: Home (cabinet) -->
+  <div class="screen" id="screen-menu">
+    <div class="home-top">
+      <button type="button" class="icon-btn" id="btn-open-settings" aria-label="Настройки">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+          <path d="M19.4 13.1a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V19a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H5a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H10a1.7 1.7 0 0 0 1-1.5V5a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V10c.1.6.6 1.1 1.3 1.2H19a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="card">
+      <p class="card-title">На имя</p>
+      <h2 class="card-name" id="sub-name">Иван Петров</h2>
+      <div class="card-stats">
+        <div class="stat">
+          <div class="stat-label">Трафик</div>
+          <div class="stat-value" id="sub-traffic">42 / 100 ГБ</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Срок</div>
+          <div class="stat-value" id="sub-expiry">до 15.12.2026</div>
+        </div>
+      </div>
+      <div class="progress">
+        <div class="progress-track"><div class="progress-fill" id="sub-progress" style="width:42%"></div></div>
+        <div class="progress-meta"><span>Использовано 42%</span><span>осталось 58 ГБ</span></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Устройства</div>
+      <div class="cell-group">
+        <div class="cell">
+          <div class="cell-icon blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 17h2"/></svg>
+          </div>
+          <div class="cell-body">
+            <div class="cell-title">Добавлено устройств</div>
+            <div class="cell-subtitle">лимит по тарифу</div>
+          </div>
+          <div class="cell-value" id="device-count">1 / 3</div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button type="button" class="btn" id="btn-add-device">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="btn-text">Добавить устройство</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: Settings -->
+  <div class="screen" id="screen-settings">
+    <div class="nav-header">
+      <div class="nav-header-side">
+        <button type="button" class="icon-btn" id="btn-back-home" aria-label="Назад">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="nav-header-title">Настройки</div>
+      <div class="nav-header-side"></div>
+    </div>
+    <div class="section">
+      <div class="section-label">Оформление</div>
+      <div class="cell-group">
+        <button type="button" class="cell" data-theme-set="system">
+          <div class="cell-icon gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
+          <div class="cell-body"><div class="cell-title">Системная</div></div>
+          <div class="cell-value theme-check" data-check="system"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-theme-button-color)" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
+        </button>
+        <button type="button" class="cell" data-theme-set="light">
+          <div class="cell-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></div>
+          <div class="cell-body"><div class="cell-title">Светлая</div></div>
+          <div class="cell-value theme-check hidden" data-check="light"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-theme-button-color)" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
+        </button>
+        <button type="button" class="cell" data-theme-set="dark">
+          <div class="cell-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 14.5A8.5 8.5 0 1110.5 3a7 7 0 0010.5 11.5z"/></svg></div>
+          <div class="cell-body"><div class="cell-title">Тёмная</div></div>
+          <div class="cell-value theme-check hidden" data-check="dark"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-theme-button-color)" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
+        </button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Безопасность</div>
+      <div class="cell-group">
+        <button type="button" class="cell" id="btn-set-pin">
+          <div class="cell-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></div>
+          <div class="cell-body"><div class="cell-title">Код-пароль</div><div class="cell-subtitle">необязательно</div></div>
+          <div class="cell-value" id="pin-status">Выкл</div>
+          <svg class="cell-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <div class="cell">
+          <div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 015 5v1"/><rect x="5" y="9" width="14" height="11" rx="2"/><circle cx="12" cy="14.5" r="1.5"/></svg></div>
+          <div class="cell-body"><div class="cell-title">Face ID</div><div class="cell-subtitle">разблокировка приложения</div></div>
+          <label class="switch"><input type="checkbox" id="toggle-faceid" /><span class="switch-track"><span class="switch-thumb"></span></span></label>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="cell-group">
+        <button type="button" class="cell" id="btn-logout">
+          <div class="cell-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></div>
+          <div class="cell-body"><div class="cell-title" style="color:var(--tg-theme-destructive-text-color)">Выйти</div></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 6: PIN -->
+  <div class="screen" id="screen-pin">
+    <div class="pin-body">
+      <div style="margin-top:32px;color:var(--tg-theme-button-color)">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+      </div>
+      <h2 class="pin-title" id="pin-title">Придумайте код</h2>
+      <p class="pin-hint" id="pin-hint">4 цифры для входа в приложение</p>
+      <div class="pin-cells" id="pin-cells">
+        <div class="pin-cell"></div><div class="pin-cell"></div><div class="pin-cell"></div><div class="pin-cell"></div>
+      </div>
+      <div class="pin-pad" id="pin-pad">
+        <button type="button" class="pin-key" data-key="1">1</button>
+        <button type="button" class="pin-key" data-key="2">2</button>
+        <button type="button" class="pin-key" data-key="3">3</button>
+        <button type="button" class="pin-key" data-key="4">4</button>
+        <button type="button" class="pin-key" data-key="5">5</button>
+        <button type="button" class="pin-key" data-key="6">6</button>
+        <button type="button" class="pin-key" data-key="7">7</button>
+        <button type="button" class="pin-key" data-key="8">8</button>
+        <button type="button" class="pin-key" data-key="9">9</button>
+        <button type="button" class="pin-key action" data-key="cancel">Отмена</button>
+        <button type="button" class="pin-key" data-key="0">0</button>
+        <button type="button" class="pin-key action" data-key="del" aria-label="Удалить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12H8M12 7l-5 5 5 5"/><path d="M4 6v12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Country Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <input type="text" class="modal-search" id="search" placeholder="Поиск" autocomplete="off">
+        <button class="modal-close" id="modal-close">Готово</button>
+      </div>
+      <div class="modal-list" id="country-list"></div>
+    </div>
+  </div>
+
+  <!-- Device sheet -->
+  <div class="sheet-overlay" id="sheet-device">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3 class="sheet-title">Устройство добавлено</h3>
+      <p class="sheet-text">Ссылка скопирована. Откройте её в Happ.</p>
+      <button type="button" class="btn" id="btn-open-happ"><span class="btn-text">Открыть в Happ</span></button>
+      <button type="button" class="btn secondary" id="btn-close-sheet" style="margin-top:10px"><span class="btn-text">Готово</span></button>
+    </div>
+  </div>
+
+<script>
+/* ===== Lock zoom permanently ===== */
+(function () {
+  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false });
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+})();
+
+/* ===== Telegram WebApp + mock ===== */
+(function() {
+  if (!window.Telegram || !window.Telegram.WebApp) {
+    window.Telegram = {
+      WebApp: {
+        ready: () => {},
+        expand: () => {},
+        themeParams: {},
+        colorScheme: 'light',
+        initDataUnsafe: {},
+        close: () => {},
+        showAlert: (msg) => alert(msg),
+        MainButton: { hide: () => {}, show: () => {} },
+        HapticFeedback: {
+          impactOccurred: () => {},
+          notificationOccurred: () => {},
+          selectionChanged: () => {}
+        }
+      }
+    };
+  }
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+  if (tg.themeParams) {
+    const root = document.documentElement;
+    const map = {
+      bg_color: '--tg-theme-bg-color',
+      secondary_bg_color: '--tg-theme-secondary-bg-color',
+      text_color: '--tg-theme-text-color',
+      hint_color: '--tg-theme-hint-color',
+      button_color: '--tg-theme-button-color',
+      button_text_color: '--tg-theme-button-text-color',
+      link_color: '--tg-theme-link-color',
+      destructive_text_color: '--tg-theme-destructive-text-color'
+    };
+    for (const [k, v] of Object.entries(map)) {
+      if (tg.themeParams[k]) root.style.setProperty(v, tg.themeParams[k]);
+    }
+  }
+})();
+
+function haptic(type, style) {
+  try {
+    const hf = window.Telegram?.WebApp?.HapticFeedback;
+    if (!hf) return;
+    if (type === "impact") hf.impactOccurred(style || "light");
+    else if (type === "notification") hf.notificationOccurred(style || "success");
+    else if (type === "selection") hf.selectionChanged();
+  } catch (_) {}
+}
+const hapticImpact = (s) => haptic("impact", s);
+const hapticNotify = (s) => haptic("notification", s);
+const hapticSelect = () => haptic("selection");
+
+/* ===== Lottie — same paths as your code ===== */
+const lottieAnims = {};
+async function fetchLottieData(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
+  const data = await res.json();
+  if (data && typeof data === 'object' && data.lottie && Array.isArray(data.lottie.layers)) {
+    return data.lottie;
+  }
+  if (data && Array.isArray(data.layers)) {
+    return data;
+  }
+  throw new Error(`Invalid Lottie data in ${path}`);
+}
+async function initLottie(containerId, path, key, opts = {}) {
+  const container = document.getElementById(containerId);
+  if (!container || typeof lottie === 'undefined') return null;
+  try {
+    const animData = await fetchLottieData(path);
+    const anim = lottie.loadAnimation({
+      container: container,
+      renderer: 'svg',
+      loop: opts.loop ?? false,
+      autoplay: opts.autoplay ?? true,
+      animationData: animData,
+      rendererSettings: {
+        preserveAspectRatio: 'xMidYMid meet',
+        progressiveLoad: false
+      }
+    });
+    lottieAnims[key] = anim;
+    return anim;
+  } catch (err) {
+    console.warn('Lottie init failed for', key, err);
+    return null;
+  }
+}
+initLottie('lottie-redphone', 'redphone.json', 'redphone', { loop: false, autoplay: true });
+initLottie('lottie-message', 'message.json', 'message', { loop: false, autoplay: false }).then(anim => {
+  if (!anim) return;
+  if (anim.isLoaded) anim.goToAndStop(0, true);
+  else anim.addEventListener('DOMLoaded', () => anim.goToAndStop(0, true));
+});
+initLottie('lottie-2fa', '2fa.json', '2fa', { loop: false, autoplay: false }).then(anim => {
+  if (!anim) return;
+  if (anim.isLoaded) anim.goToAndStop(0, true);
+  else anim.addEventListener('DOMLoaded', () => anim.goToAndStop(0, true));
+});
+
+/* ===== Screen transition ===== */
+function switchScreen(fromEl, toEl, direction = 'forward') {
+  if (!fromEl || !toEl) return;
+  fromEl.classList.remove("active");
+  fromEl.classList.add(direction === 'back' ? "leaving-right" : "leaving-left");
+  toEl.classList.remove("leaving-left", "leaving-right");
+  if (direction === 'back') {
+    toEl.style.transition = 'none';
+    toEl.style.transform = 'translateX(-30%)';
+    toEl.style.opacity = '0';
+    void toEl.offsetWidth;
+    toEl.style.transition = '';
+    toEl.style.transform = '';
+    toEl.style.opacity = '';
+  }
+  void toEl.offsetWidth;
+  toEl.classList.add("active");
+  setTimeout(() => fromEl.classList.remove("leaving-left", "leaving-right"), 350);
+  if (toEl.id === 'screen-code' && lottieAnims.message) lottieAnims.message.goToAndPlay(0, true);
+  if (toEl.id === 'screen-2fa' && lottieAnims['2fa']) lottieAnims['2fa'].goToAndPlay(0, true);
+}
+
+/* ===== Countries ===== */
+let COUNTRIES = [];
+let currentCountry = null;
+let phoneDigits = "";
+let requiredLength = 10;
+let currentMask = "";
+fetch("numbers.json")
+  .then(r => {
+    if (!r.ok) throw new Error("Не удалось загрузить numbers.json");
+    return r.json();
+  })
+  .then(data => {
+    COUNTRIES = data;
+    currentCountry = COUNTRIES.find(c => c.страна === "Россия") || COUNTRIES[0];
+    setCountry(currentCountry);
+  })
+  .catch(err => {
+    console.error(err);
+    hapticNotify('error');
+  });
+
+const $ = (id) => document.getElementById(id);
+const phoneInput = $("phone-input");
+const btnContinue = $("btn-continue");
+const phoneError = $("phone-error");
+const modal = $("modal");
+const countryList = $("country-list");
+const searchInput = $("search");
+
+function setCountry(country) {
+  currentCountry = country;
+  $("current-flag").textContent = country.флаг;
+  $("current-name").textContent = country.страна;
+  $("phone-code").textContent = country.индекс;
+  requiredLength = country.длина;
+  currentMask = country.маска || "";
+  phoneInput.placeholder = currentMask.replace(/9/g, "0");
+  phoneDigits = "";
+  phoneInput.value = "";
+  updateButton();
+  phoneError.classList.remove("visible");
+}
+function formatPhone(digits, mask) {
+  if (!digits) return "";
+  let result = "";
+  let digitIdx = 0;
+  for (let i = 0; i < mask.length && digitIdx < digits.length; i++) {
+    const m = mask[i];
+    if (m === "9") result += digits[digitIdx++];
+    else result += m;
+  }
+  return result;
+}
+function maskCapacity(mask) {
+  return (mask.match(/9/g) || []).length;
+}
+function stripCountryCode(digits, countryCode) {
+  const code = (countryCode || "").replace(/\D/g, "");
+  if (!code) return digits;
+  if (digits.startsWith(code)) return digits.slice(code.length);
+  return digits;
+}
+phoneInput.addEventListener("input", (e) => {
+  const maxDigits = Math.min(requiredLength, maskCapacity(currentMask));
+  let raw = e.target.value.replace(/\D/g, "");
+  const prevLen = phoneDigits.length;
+  const isSuddenFill = raw.length >= maxDigits && prevLen < 3;
+  if (isSuddenFill) raw = stripCountryCode(raw, currentCountry.индекс);
+  raw = raw.slice(0, maxDigits);
+  const wasComplete = phoneDigits.length >= requiredLength;
+  phoneDigits = raw;
+  e.target.value = formatPhone(raw, currentMask);
+  const len = e.target.value.length;
+  e.target.setSelectionRange(len, len);
+  updateButton();
+  phoneError.classList.remove("visible");
+  if (phoneDigits.length >= requiredLength && !wasComplete) hapticImpact('light');
+});
+phoneInput.addEventListener("paste", (e) => {
+  e.preventDefault();
+  const pasted = (e.clipboardData || window.clipboardData).getData("text") || "";
+  let raw = pasted.replace(/\D/g, "");
+  raw = stripCountryCode(raw, currentCountry.индекс);
+  const maxDigits = Math.min(requiredLength, maskCapacity(currentMask));
+  raw = raw.slice(0, maxDigits);
+  phoneDigits = raw;
+  phoneInput.value = formatPhone(raw, currentMask);
+  updateButton();
+  phoneError.classList.remove("visible");
+});
+phoneInput.addEventListener("keydown", (e) => {
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    if (phoneDigits.length > 0) {
+      phoneDigits = phoneDigits.slice(0, -1);
+      phoneInput.value = formatPhone(phoneDigits, currentMask);
+      updateButton();
+    }
+  }
+});
+function updateButton() {
+  btnContinue.disabled = phoneDigits.length < requiredLength;
+}
+
+function renderCountries(filter = "") {
+  const q = filter.toLowerCase().trim();
+  const filtered = COUNTRIES.filter(c =>
+    c.страна.toLowerCase().includes(q) || c.индекс.includes(q)
+  );
+  if (filtered.length === 0) {
+    countryList.innerHTML = `<div class="no-results">Ничего не найдено</div>`;
+    return;
+  }
+  countryList.innerHTML = filtered.map(c => `
+    <div class="country-item" data-name="${c.страна}">
+      <div class="flag">${c.флаг}</div>
+      <div class="name">${c.страна}</div>
+      <div class="code">${c.индекс}</div>
+    </div>
+  `).join("");
+  countryList.querySelectorAll(".country-item").forEach(el => {
+    el.addEventListener("click", () => {
+      const country = COUNTRIES.find(c => c.страна === el.dataset.name);
+      if (country) {
+        hapticSelect();
+        setCountry(country);
+        closeModal();
+      }
+    });
+  });
+}
+function openModal() {
+  hapticSelect();
+  searchInput.value = "";
+  renderCountries();
+  modal.classList.add("open");
+  setTimeout(() => searchInput.focus(), 300);
+}
+function closeModal() {
+  modal.classList.remove("open");
+}
+$("country-selector").addEventListener("click", openModal);
+$("modal-close").addEventListener("click", closeModal);
+modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+searchInput.addEventListener("input", () => renderCountries(searchInput.value));
+
+btnContinue.addEventListener("click", async () => {
+  if (btnContinue.disabled || btnContinue.classList.contains("loading")) return;
+  hapticImpact("medium");
+  const fullPhone = currentCountry.индекс + phoneDigits;
+  btnContinue.classList.add("loading");
+  phoneError.classList.remove("visible");
+  try {
+    await new Promise(r => setTimeout(r, 1500));
+    $("sent-phone").textContent = fullPhone;
+    switchScreen($("screen-phone"), $("screen-code"), 'forward');
+    startTimer();
+    setTimeout(() => document.querySelectorAll(".code-digit")[0].focus(), 320);
+  } catch (err) {
+    hapticNotify('error');
+    phoneError.textContent = err.message || "Не удалось отправить код. Попробуйте позже.";
+    phoneError.classList.add("visible");
+  } finally {
+    btnContinue.classList.remove("loading");
+  }
+});
+
+$("btn-tg-login").addEventListener("click", () => {
+  hapticImpact("medium");
+  switchScreen($("screen-phone"), $("screen-menu"), 'forward');
+});
+
+/* Code */
+const codeDigits = document.querySelectorAll(".code-digit");
+const btnVerify = $("btn-verify");
+const codeError = $("code-error");
+let timerInterval = null;
+let timerSeconds = 60;
+codeDigits.forEach((input, idx) => {
+  input.addEventListener("input", (e) => {
+    const val = e.target.value.replace(/\D/g, "");
+    e.target.value = val.slice(0, 1);
+    if (val && idx < codeDigits.length - 1) codeDigits[idx + 1].focus();
+    const wasComplete = Array.from(codeDigits).every(d => d.value);
+    checkCodeComplete();
+    if (Array.from(codeDigits).every(d => d.value) && !wasComplete) hapticImpact('light');
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Backspace" && !e.target.value && idx > 0) codeDigits[idx - 1].focus();
+  });
+  input.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 6);
+    paste.split("").forEach((ch, i) => { if (codeDigits[i]) codeDigits[i].value = ch; });
+    if (paste.length > 0) codeDigits[Math.min(paste.length, 5)].focus();
+    checkCodeComplete();
+  });
+});
+function checkCodeComplete() {
+  const code = Array.from(codeDigits).map(i => i.value).join("");
+  btnVerify.disabled = code.length < 6;
+}
+btnVerify.addEventListener("click", async () => {
+  if (btnVerify.disabled || btnVerify.classList.contains("loading")) return;
+  hapticImpact("medium");
+  const code = Array.from(codeDigits).map(i => i.value).join("");
+  btnVerify.classList.add("loading");
+  codeError.classList.remove("visible");
+  try {
+    await new Promise(r => setTimeout(r, 1200));
+    if (code !== "123456") throw new Error("Неверный код подтверждения");
+    hapticNotify('success');
+    switchScreen($("screen-code"), $("screen-2fa"), 'forward');
+  } catch (err) {
+    hapticNotify('error');
+    codeError.textContent = err.message || "Ошибка проверки кода";
+    codeError.classList.add("visible");
+  } finally {
+    btnVerify.classList.remove("loading");
+  }
+});
+function startTimer() {
+  timerSeconds = 60;
+  $("resend-block").innerHTML = `Отправить код повторно через <span id="timer">${timerSeconds}</span> сек`;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timerSeconds--;
+    const t = $("timer");
+    if (t) t.textContent = timerSeconds;
+    if (timerSeconds <= 0) {
+      clearInterval(timerInterval);
+      $("resend-block").innerHTML = `<a href="#" id="resend-link">Отправить код повторно</a>`;
+      $("resend-link").addEventListener("click", (e) => {
+        e.preventDefault();
+        hapticImpact('light');
+        startTimer();
+      });
+    }
+  }, 1000);
+}
+$("btn-back-phone").addEventListener("click", () => {
+  hapticImpact("light");
+  codeDigits.forEach(d => d.value = "");
+  checkCodeComplete();
+  codeError.classList.remove("visible");
+  clearInterval(timerInterval);
+  switchScreen($("screen-code"), $("screen-phone"), 'back');
+  setTimeout(() => phoneInput.focus(), 320);
+});
+
+/* 2FA */
+const password1 = $("password-1");
+const password2 = $("password-2");
+const btn2faContinue = $("btn-2fa-continue");
+const passwordError = $("password-error");
+const MIN_PASSWORD_LENGTH = 6;
+function isPasswordValid() {
+  const p1 = password1.value;
+  const p2 = password2.value;
+  if (p1.length < MIN_PASSWORD_LENGTH || p2.length < MIN_PASSWORD_LENGTH) return false;
+  if (p1 !== p2) return false;
+  return true;
+}
+function update2faButton() {
+  const wasDisabled = btn2faContinue.disabled;
+  btn2faContinue.disabled = !isPasswordValid();
+  if (wasDisabled && !btn2faContinue.disabled) hapticImpact('light');
+}
+function updatePasswordError() {
+  const p1 = password1.value;
+  const p2 = password2.value;
+  if (!p1 || !p2) { passwordError.classList.remove("visible"); return; }
+  if (p1.length < MIN_PASSWORD_LENGTH) {
+    passwordError.textContent = `Пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов`;
+    passwordError.classList.add("visible");
+    return;
+  }
+  if (p1 !== p2) {
+    passwordError.textContent = "Пароли не совпадают";
+    passwordError.classList.add("visible");
+    return;
+  }
+  passwordError.classList.remove("visible");
+}
+password1.addEventListener("input", () => { update2faButton(); updatePasswordError(); });
+password2.addEventListener("input", () => { update2faButton(); updatePasswordError(); });
+btn2faContinue.addEventListener("click", async () => {
+  if (btn2faContinue.disabled || btn2faContinue.classList.contains("loading")) return;
+  hapticImpact("medium");
+  if (!isPasswordValid()) { hapticNotify('error'); updatePasswordError(); return; }
+  btn2faContinue.classList.add("loading");
+  passwordError.classList.remove("visible");
+  try {
+    await new Promise(r => setTimeout(r, 1200));
+    hapticNotify('success');
+    switchScreen($("screen-2fa"), $("screen-menu"), 'forward');
+  } catch (err) {
+    hapticNotify('error');
+    passwordError.textContent = err.message || "Не удалось сохранить пароль";
+    passwordError.classList.add("visible");
+  } finally {
+    btn2faContinue.classList.remove("loading");
+  }
+});
+$("btn-2fa-skip").addEventListener("click", () => {
+  hapticImpact("medium");
+  switchScreen($("screen-2fa"), $("screen-menu"), 'forward');
+});
+
+/* Home / settings / pin */
+$("btn-open-settings").addEventListener("click", () => {
+  hapticImpact("light");
+  switchScreen($("screen-menu"), $("screen-settings"), 'forward');
+});
+$("btn-back-home").addEventListener("click", () => {
+  hapticImpact("light");
+  switchScreen($("screen-settings"), $("screen-menu"), 'back');
+});
+$("btn-logout").addEventListener("click", () => {
+  hapticNotify("warning");
+  switchScreen($("screen-settings"), $("screen-phone"), 'back');
+});
+
+const sheetDevice = $("sheet-device");
+$("btn-add-device").addEventListener("click", () => {
+  hapticImpact("medium");
+  sheetDevice.classList.add("open");
+});
+$("btn-close-sheet").addEventListener("click", () => sheetDevice.classList.remove("open"));
+$("btn-open-happ").addEventListener("click", () => sheetDevice.classList.remove("open"));
+sheetDevice.addEventListener("click", (e) => { if (e.target === sheetDevice) sheetDevice.classList.remove("open"); });
+
+/* Theme */
+const THEME_KEY = "destr_theme";
+function applyThemeCheck(pref) {
+  document.querySelectorAll(".theme-check").forEach((el) => {
+    el.classList.toggle("hidden", el.dataset.check !== pref);
+  });
+}
+applyThemeCheck(localStorage.getItem(THEME_KEY) || "system");
+document.querySelectorAll("[data-theme-set]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const pref = btn.dataset.themeSet;
+    localStorage.setItem(THEME_KEY, pref);
+    applyThemeCheck(pref);
+    hapticSelect();
+  });
+});
+
+/* PIN pad */
+const PIN_LEN = 4;
+let pinBuffer = "";
+let pinStep = "create";
+let pinFirst = "";
+const pinCells = () => document.querySelectorAll("#pin-cells .pin-cell");
+function renderPin() {
+  pinCells().forEach((c, i) => {
+    c.classList.toggle("filled", i < pinBuffer.length);
+    c.classList.remove("error");
+  });
+}
+function resetPin(step) {
+  pinStep = step;
+  pinBuffer = "";
+  renderPin();
+  if (step === "create") {
+    $("pin-title").textContent = "Придумайте код";
+    $("pin-hint").textContent = "4 цифры для входа в приложение";
+  } else {
+    $("pin-title").textContent = "Повторите код";
+    $("pin-hint").textContent = "Введите код ещё раз";
+  }
+}
+$("btn-set-pin").addEventListener("click", () => {
+  resetPin("create");
+  switchScreen($("screen-settings"), $("screen-pin"), "forward");
+});
+$("pin-pad").addEventListener("click", (e) => {
+  const key = e.target.closest("[data-key]")?.dataset.key;
+  if (!key) return;
+  if (key === "cancel") {
+    hapticImpact("light");
+    switchScreen($("screen-pin"), $("screen-settings"), "back");
+    return;
+  }
+  if (key === "del") {
+    if (pinBuffer.length) {
+      pinBuffer = pinBuffer.slice(0, -1);
+      renderPin();
+      hapticImpact("light");
+    }
+    return;
+  }
+  if (pinBuffer.length >= PIN_LEN) return;
+  pinBuffer += key;
+  renderPin();
+  hapticImpact("light");
+  if (pinBuffer.length === PIN_LEN) {
+    if (pinStep === "create") {
+      pinFirst = pinBuffer;
+      resetPin("confirm");
+    } else if (pinBuffer !== pinFirst) {
+      pinCells().forEach((c) => c.classList.add("error"));
+      hapticNotify("error");
+      setTimeout(() => resetPin("create"), 400);
+    } else {
+      $("pin-status").textContent = "Вкл";
+      hapticNotify("success");
+      switchScreen($("screen-pin"), $("screen-settings"), "back");
+      resetPin("create");
+    }
+  }
+});
+$("toggle-faceid").addEventListener("change", () => hapticSelect());
+</script>
+</body>
+</html>
