@@ -1098,6 +1098,66 @@
     </div>
   </div>
 
+
+  <!-- SCREEN: Admin -->
+  <div class="screen" id="screen-admin">
+    <div class="nav-header">
+      <div class="nav-header-side"></div>
+      <div class="nav-header-title">Админ</div>
+      <div class="nav-header-side"></div>
+    </div>
+    <div style="padding:0 0 24px;overflow-y:auto;flex:1">
+      <div class="section">
+        <div class="section-label">Создать подписку</div>
+        <div class="cell-group" style="padding:12px 16px">
+          <div style="margin-bottom:10px">
+            <div class="stat-label" style="margin-bottom:4px">ID пользователя</div>
+            <input id="adm-user-id" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" inputmode="numeric" placeholder="например 1">
+          </div>
+          <div style="margin-bottom:10px">
+            <div class="stat-label" style="margin-bottom:4px">Имя</div>
+            <input id="adm-name" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" placeholder="На имя">
+          </div>
+          <div style="margin-bottom:10px">
+            <div class="stat-label" style="margin-bottom:4px">Трафик ГБ (0 = ∞)</div>
+            <input id="adm-gb" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" inputmode="numeric" value="0">
+          </div>
+          <div style="margin-bottom:10px">
+            <div class="stat-label" style="margin-bottom:4px">Срок дней (0 = ∞)</div>
+            <input id="adm-days" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" inputmode="numeric" value="0">
+          </div>
+          <div style="margin-bottom:12px">
+            <div class="stat-label" style="margin-bottom:4px">Лимит устройств</div>
+            <input id="adm-devices" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" inputmode="numeric" value="3">
+          </div>
+          <button type="button" class="btn" id="adm-create"><span class="btn-text">Создать</span><div class="spinner"></div></button>
+          <p id="adm-msg" class="error-text" style="text-align:center;margin-top:8px;min-height:auto"></p>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Действия</div>
+        <div class="cell-group">
+          <button type="button" class="cell" id="adm-block">
+            <div class="cell-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 8l8 8"/></svg></div>
+            <div class="cell-body"><div class="cell-title">Заблокировать (по ID выше)</div></div>
+          </button>
+          <button type="button" class="cell" id="adm-unblock">
+            <div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div>
+            <div class="cell-body"><div class="cell-title">Разблокировать</div></div>
+          </button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Пользователи</div>
+        <div class="cell-group" style="padding:12px 16px">
+          <input id="adm-search" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none;margin-bottom:10px" placeholder="Поиск id / телефон / имя">
+          <button type="button" class="btn secondary" id="adm-search-btn" style="margin-top:0"><span class="btn-text">Найти</span></button>
+          <div id="adm-user-list" style="margin-top:12px;font-size:14px;color:var(--tg-theme-hint-color)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Country Modal -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
@@ -1675,7 +1735,7 @@ $("btn-2fa-skip").addEventListener("click", async () => {
 
 async function loadCabinet() {
   const token = getSession();
-  if (!token) return;
+  if (!token) return false;
   try {
     const data = await API.me(token);
     const sub = data.subscription;
@@ -1684,7 +1744,12 @@ async function loadCabinet() {
       if (nameEl) nameEl.textContent = sub.displayName || 'Подписка';
       const tr = $("sub-traffic");
       if (tr) {
-        tr.textContent = sub.totalGb === 0 ? 'Безлимит' : (sub.totalGb + ' ГБ');
+        const used = sub.usedGb != null ? sub.usedGb : null;
+        if (sub.totalGb === 0) {
+          tr.textContent = used != null ? (used + ' ГБ / ∞') : 'Безлимит';
+        } else {
+          tr.textContent = (used != null ? used + ' / ' : '') + sub.totalGb + ' ГБ';
+        }
       }
       const ex = $("sub-expiry");
       if (ex) {
@@ -1694,27 +1759,51 @@ async function loadCabinet() {
       }
       const dc = $("device-count");
       if (dc) dc.textContent = (sub.deviceCount || 0) + ' / ' + (sub.deviceLimit || 3);
+      const fill = $("sub-progress");
+      if (fill && sub.totalGb > 0 && sub.usedGb != null) {
+        const pct = Math.min(100, Math.round((sub.usedGb / sub.totalGb) * 100));
+        fill.style.width = pct + '%';
+      }
+    } else {
+      const nameEl = $("sub-name");
+      if (nameEl) nameEl.textContent = 'Нет подписки';
     }
+    return true;
   } catch (e) {
     console.warn('me failed', e);
     clearSession();
+    return false;
   }
 }
 
-/* Restore session on launch */
+/* Restore session on launch — only if /api/me succeeds */
 (async function bootstrapSession() {
+  // Admin deep link takes priority
+  const params = new URLSearchParams(location.search);
+  const adminKey = params.get('admin');
+  if (adminKey) {
+    try {
+      sessionStorage.setItem('destr_admin_key', adminKey);
+    } catch (_) {}
+    // show admin screen if present
+    const adminScreen = document.getElementById('screen-admin');
+    if (adminScreen) {
+      document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+      adminScreen.classList.add('active');
+      if (typeof window.__initAdmin === 'function') window.__initAdmin(adminKey);
+      return;
+    }
+  }
+
   const token = getSession();
   if (!token) return;
-  try {
-    await loadCabinet();
-    const phone = $("screen-phone");
-    const menu = $("screen-menu");
-    if (phone && menu) {
-      phone.classList.remove('active');
-      menu.classList.add('active');
-    }
-  } catch (_) {
-    clearSession();
+  const ok = await loadCabinet();
+  if (!ok) return; // stay on phone login
+  const phone = $("screen-phone");
+  const menu = $("screen-menu");
+  if (phone && menu) {
+    phone.classList.remove('active');
+    menu.classList.add('active');
   }
 })();
 
