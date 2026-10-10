@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>DxS Connect</title>
-  <meta name="destr-build" content="2026-10-10-v5">
+  <meta name="destr-build" content="2026-10-10-v6">
   <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
   <style>
@@ -1113,8 +1113,8 @@
           <svg class="cell-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </button>
         <div class="cell">
-          <div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 012-2h2M20 8V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M9 15c.8 1.2 1.8 1.8 3 1.8s2.2-.6 3-1.8"/></svg></div>
-              <div class="cell-body"><div class="cell-title">Face ID</div><div class="cell-subtitle">разблокировка приложения</div></div>
+          <div class="cell-icon green"><span id="bio-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 012-2h2M20 8V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M9 15c.8 1.2 1.8 1.8 3 1.8s2.2-.6 3-1.8"/></svg></span></div>
+              <div class="cell-body"><div class="cell-title" id="bio-title">Face ID</div><div class="cell-subtitle" id="bio-subtitle">разблокировка приложения</div></div>
           <label class="switch"><input type="checkbox" id="toggle-faceid" /><span class="switch-track"><span class="switch-thumb"></span></span></label>
         </div>
       </div>
@@ -1238,7 +1238,7 @@
     </div>
   </div>
 
-  <!-- Device sheet -->
+  <!-- Device added toast sheet -->
   <div class="sheet-overlay" id="sheet-device">
     <div class="sheet">
       <div class="sheet-handle"></div>
@@ -1249,60 +1249,42 @@
     </div>
   </div>
 
-
-
-
-  <!-- SCREEN: Devices -->
-  <div class="screen" id="screen-devices">
-    <div class="nav-header">
-      <div class="nav-header-side">
-        <button type="button" class="icon-btn" id="btn-back-devices" aria-label="Назад">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-      </div>
-      <div class="nav-header-title">Устройства</div>
-      <div class="nav-header-side"></div>
-    </div>
-    <div id="devices-list-box" style="flex:1;overflow-y:auto;padding-bottom:16px"></div>
-  </div>
-
-  <!-- SCREEN: Phone bind -->
-  <div class="screen" id="screen-phone-bind">
-    <div class="nav-header">
-      <div class="nav-header-side">
-        <button type="button" class="icon-btn" id="btn-back-phone-bind" aria-label="Назад">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-      </div>
-      <div class="nav-header-title">Номер телефона</div>
-      <div class="nav-header-side"></div>
-    </div>
-    <p style="font-size:15px;color:var(--tg-theme-hint-color);line-height:1.4;margin:8px 0 16px">
-      Номер нужен, чтобы коды входа приходили в нашего бота. Формат: +79001234567
-    </p>
-    <input id="settings-phone-input" type="tel" inputmode="tel" placeholder="+79001234567" class="phone-input" style="width:100%;height:52px;background:var(--tg-theme-secondary-bg-color);border-radius:12px;padding:0 16px;font-size:18px;border:none;outline:none;margin-bottom:8px" />
-    <p id="phone-save-msg" class="error-text" style="text-align:center;min-height:22px"></p>
-    <div class="bottom">
-      <button type="button" class="btn" id="btn-phone-save">
-        <span class="btn-text">Сохранить</span>
-        <div class="spinner"></div>
-      </button>
+  <!-- Devices list sheet -->
+  <div class="sheet-overlay" id="sheet-devices">
+    <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <h3 class="sheet-title">Устройства</h3>
+      <div id="devices-list-box" style="overflow-y:auto;flex:1;margin-bottom:12px;-webkit-overflow-scrolling:touch"></div>
+      <button type="button" class="btn secondary" id="btn-close-devices"><span class="btn-text">Закрыть</span></button>
     </div>
   </div>
 
-  <!-- Rename device sheet (small form stays sheet) -->
+  <!-- Phone sheet -->
+  <div class="sheet-overlay" id="sheet-phone">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3 class="sheet-title">Номер телефона</h3>
+      <p class="sheet-text">Нужен, чтобы коды входа приходили в нашего бота. Формат: +79001234567</p>
+      <input id="settings-phone-input" type="tel" inputmode="tel" placeholder="+79001234567" autocomplete="tel" style="width:100%;height:48px;background:var(--tg-theme-secondary-bg-color);border-radius:12px;padding:0 14px;font-size:17px;border:none;outline:none;margin-bottom:10px;color:var(--tg-theme-text-color);font-family:inherit" />
+      <p id="phone-save-msg" class="error-text" style="text-align:center;min-height:20px"></p>
+      <button type="button" class="btn" id="btn-phone-save"><span class="btn-text">Сохранить</span><div class="spinner"></div></button>
+      <button type="button" class="btn secondary" id="btn-phone-cancel" style="margin-top:10px"><span class="btn-text">Отмена</span></button>
+    </div>
+  </div>
+
+  <!-- Rename device sheet -->
   <div class="sheet-overlay" id="sheet-rename">
     <div class="sheet">
       <div class="sheet-handle"></div>
       <h3 class="sheet-title">Имя устройства</h3>
-      <input id="rename-input" class="phone-input" style="width:100%;height:48px;background:var(--tg-theme-secondary-bg-color);border-radius:12px;padding:0 14px;font-size:17px;border:none;outline:none;margin-bottom:14px" maxlength="64" />
+      <input id="rename-input" type="text" maxlength="64" style="width:100%;height:48px;background:var(--tg-theme-secondary-bg-color);border-radius:12px;padding:0 14px;font-size:17px;border:none;outline:none;margin-bottom:14px;color:var(--tg-theme-text-color);font-family:inherit" />
       <button type="button" class="btn" id="btn-rename-save"><span class="btn-text">Сохранить</span></button>
       <button type="button" class="btn secondary" id="btn-rename-cancel" style="margin-top:10px"><span class="btn-text">Отмена</span></button>
     </div>
   </div>
 
 <script>
-window.__DESTR_BUILD = "2026-10-10-v5";
+window.__DESTR_BUILD = "2026-10-10-v6";
 console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
@@ -2037,6 +2019,33 @@ class TelegramBiometrics {
 }
 const tgBiometrics = new TelegramBiometrics();
 
+const SVG_FACE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 012-2h2M20 8V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M9 15c.8 1.2 1.8 1.8 3 1.8s2.2-.6 3-1.8"/></svg>`;
+const SVG_TOUCH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c-3.3 0-6 2.5-6 5.8v2.2"/><path d="M18 11.2V9c0-3.3-2.7-5.8-6-5.8"/><path d="M8.2 14.5c0 2.4 1.7 4.3 3.8 4.3s3.8-1.9 3.8-4.3v-1.5"/><path d="M12 8.5v6.2"/><path d="M9.5 9.8c.4-.9 1.4-1.5 2.5-1.5 1.2 0 2.2.6 2.6 1.5"/><path d="M7 12.2c0-2.8 2.2-5 5-5s5 2.2 5 5"/><path d="M12 18.8c-1.5 0-2.8-.8-3.5-2"/></svg>`;
+
+async function refreshBiometricUI() {
+  const title = document.getElementById('bio-title');
+  const sub = document.getElementById('bio-subtitle');
+  const icon = document.getElementById('bio-icon');
+  let type = 'unknown';
+  try {
+    const init = await tgBiometrics.init();
+    if (init.available && init.type) type = init.type; // 'face' | 'finger'
+  } catch (_) {}
+  const isFinger = type === 'finger' || type === 'touch' || type === 'fingerprint';
+  const label = isFinger ? 'Touch ID' : 'Face ID';
+  if (title) title.textContent = label;
+  if (sub) {
+    sub.textContent = isFinger
+      ? 'вход по отпечатку пальца'
+      : 'вход по лицу';
+  }
+  if (icon) icon.innerHTML = isFinger ? SVG_TOUCH : SVG_FACE;
+  return label;
+}
+// run when settings may be shown / on boot
+refreshBiometricUI().catch(() => {});
+
+
 async function setupBiometric(enable) {
   if (!enable) {
     localStorage.removeItem('destr_faceid');
@@ -2044,15 +2053,15 @@ async function setupBiometric(enable) {
   }
   const initResult = await tgBiometrics.init();
   if (!initResult.available) {
-    throw new Error(initResult.error || 'Face ID / Touch ID недоступен (нужен iOS/Android Telegram)');
+    throw new Error(initResult.error || 'Биометрия недоступна (нужен iOS/Android Telegram)');
   }
-  const access = await tgBiometrics.requestAccess('Включить быстрый вход в Destr VPN');
+  const access = await tgBiometrics.requestAccess('Включить быстрый вход');
   if (!access.success) {
-    throw new Error('Доступ к Face ID не выдан');
+    throw new Error('Доступ к биометрии не выдан');
   }
-  const auth = await tgBiometrics.authenticate('Подтвердите Face ID');
+  const auth = await tgBiometrics.authenticate('Подтвердите личность');
   if (!auth.success) {
-    throw new Error('Не удалось подтвердить Face ID');
+    throw new Error('Не удалось подтвердить биометрию');
   }
   localStorage.setItem('destr_faceid', '1');
   if (auth.token && tgBiometrics.bm?.updateBiometricToken) {
@@ -2073,7 +2082,7 @@ async function tryBiometricUnlock() {
     const access = await tgBiometrics.requestAccess('Вход в Destr VPN');
     if (!access.success) return false;
   }
-  const auth = await tgBiometrics.authenticate('Сканируйте лицо для входа');
+  const auth = await tgBiometrics.authenticate('Подтвердите вход');
   return !!auth.success;
 }
 
@@ -2087,7 +2096,7 @@ document.getElementById('toggle-faceid')?.addEventListener('change', async (e) =
     e.target.checked = false;
     localStorage.removeItem('destr_faceid');
     hapticNotify('error');
-    alert(err.message || 'Face ID недоступен');
+    alert(err.message || 'Биометрия недоступна');
   }
 });
 if (localStorage.getItem('destr_faceid') === '1') {
@@ -2155,6 +2164,7 @@ if (localStorage.getItem('destr_faceid') === '1') {
 /* Home / settings / pin */
 $("btn-open-settings").addEventListener("click", () => {
   hapticImpact("light");
+  refreshBiometricUI().catch(() => {});
   switchScreen($("screen-menu"), $("screen-settings"), 'forward');
 });
 $("btn-back-home").addEventListener("click", () => {
@@ -2490,28 +2500,16 @@ function escapeHtml(s) {
 }
 
 
-document.getElementById('btn-back-devices')?.addEventListener('click', () => {
-  hapticImpact('light');
-  const from = document.getElementById('screen-devices');
-  const to = document.getElementById('screen-menu');
-  if (from && to) switchScreen(from, to, 'back');
-});
-document.getElementById('btn-back-phone-bind')?.addEventListener('click', () => {
-  hapticImpact('light');
-  const from = document.getElementById('screen-phone-bind');
-  const to = document.getElementById('screen-settings');
-  if (from && to) switchScreen(from, to, 'back');
-});
+
+
 
 document.getElementById('btn-devices-list')?.addEventListener('click', () => {
   hapticImpact('light');
   openDevicesList();
-  const from = document.querySelector('.screen.active');
-  const to = document.getElementById('screen-devices');
-  if (from && to) switchScreen(from, to, 'forward');
+  document.getElementById('sheet-devices')?.classList.add('open');
 });
 document.getElementById('btn-close-devices')?.addEventListener('click', () => {
-  /* devices is full screen */
+  
 });
 document.getElementById('sheet-devices')?.addEventListener('click', (e) => {
   if (e.target.id === 'sheet-devices') e.currentTarget.classList.remove('open');
@@ -2649,15 +2647,12 @@ document.getElementById('btn-set-phone')?.addEventListener('click', () => {
   hapticImpact('light');
   const input = document.getElementById('settings-phone-input');
   const status = document.getElementById('phone-status')?.textContent || '';
-  if (input && status && status !== 'не указан') {
-    input.value = status.startsWith('+') ? status : status;
-  }
-  const from = document.querySelector('.screen.active');
-  const to = document.getElementById('screen-phone-bind');
-  if (from && to) switchScreen(from, to, 'forward');
+  if (input && status && status !== 'не указан') input.value = status;
+  document.getElementById('phone-save-msg') && (document.getElementById('phone-save-msg').textContent = '');
+  document.getElementById('sheet-phone')?.classList.add('open');
 });
 document.getElementById('btn-phone-cancel')?.addEventListener('click', () => {
-  /* phone is full screen */
+  
 });
 document.getElementById('sheet-phone')?.addEventListener('click', (e) => {
   if (e.target.id === 'sheet-phone') e.currentTarget.classList.remove('open');
@@ -2673,9 +2668,7 @@ document.getElementById('btn-phone-save')?.addEventListener('click', async () =>
     hapticNotify('success');
     const st = document.getElementById('phone-status');
     if (st) st.textContent = data.phone;
-    const from = document.getElementById('screen-phone-bind');
-    const to = document.getElementById('screen-settings');
-    if (from && to) switchScreen(from, to, 'back');
+    document.getElementById('sheet-phone')?.classList.remove('open');
   } catch (e) {
     hapticNotify('error');
     if (msg) {
