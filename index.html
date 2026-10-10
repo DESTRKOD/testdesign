@@ -739,6 +739,126 @@
       font-size: 16px;
     }
     .hidden { display: none !important; }
+  
+    /* PIN setup (Telegram / iOS style) */
+    #screen-pin {
+      background: var(--tg-theme-bg-color);
+      padding: 0;
+    }
+    .pin-close {
+      position: absolute;
+      top: calc(12px + env(safe-area-inset-top, 0px));
+      right: 16px;
+      z-index: 5;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.06);
+      color: var(--tg-theme-hint-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+    .pin-close:active { opacity: 0.6; }
+    .pin-setup {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: calc(48px + env(safe-area-inset-top, 0px)) 24px calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+    .pin-logo {
+      width: 76px;
+      height: 76px;
+      border-radius: 22px;
+      background: linear-gradient(160deg, #5eb0f7 0%, #3390ec 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 28px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(51, 144, 236, 0.28);
+    }
+    .pin-logo .lottie-anim {
+      width: 56px;
+      height: 56px;
+    }
+    .pin-boxes {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+    .pin-box {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(0,0,0,0.12);
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, background 0.12s;
+    }
+    .pin-box.active {
+      border-color: var(--tg-theme-button-color);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--tg-theme-button-color) 22%, transparent);
+    }
+    .pin-box.filled::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--tg-theme-text-color);
+    }
+    .pin-box.error {
+      border-color: var(--tg-theme-destructive-text-color);
+    }
+    .pin-caption {
+      margin: 0 0 28px;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--tg-theme-text-color);
+      text-align: center;
+    }
+    .pin-keyboard {
+      width: 100%;
+      max-width: 300px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px 12px;
+      margin-top: auto;
+      padding-bottom: 8px;
+    }
+    .pin-kb {
+      height: 56px;
+      border: none;
+      background: transparent;
+      font-size: 28px;
+      font-weight: 500;
+      color: var(--tg-theme-text-color);
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .pin-kb:active {
+      background: rgba(0,0,0,0.06);
+    }
+    .pin-kb.empty {
+      pointer-events: none;
+    }
+    .pin-kb.del {
+      color: var(--tg-theme-text-color);
+    }
+
   </style>
 </head>
 <body>
@@ -940,31 +1060,39 @@
     </div>
   </div>
 
-  <!-- SCREEN 6: PIN -->
+  <!-- SCREEN 6: PIN setup -->
   <div class="screen" id="screen-pin">
-    <div class="pin-body">
-      <div style="margin-top:32px;color:var(--tg-theme-button-color)">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+    <button type="button" class="pin-close" id="btn-pin-close" aria-label="Закрыть">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="pin-setup">
+      <div class="pin-logo" id="lottie-pin-wrap">
+        <div class="lottie-anim" id="lottie-pin"></div>
       </div>
-      <h2 class="pin-title" id="pin-title">Придумайте код</h2>
-      <p class="pin-hint" id="pin-hint">4 цифры для входа в приложение</p>
-      <div class="pin-cells" id="pin-cells">
-        <div class="pin-cell"></div><div class="pin-cell"></div><div class="pin-cell"></div><div class="pin-cell"></div>
+      <div class="pin-boxes" id="pin-cells">
+        <div class="pin-box" data-i="0"></div>
+        <div class="pin-box" data-i="1"></div>
+        <div class="pin-box" data-i="2"></div>
+        <div class="pin-box" data-i="3"></div>
       </div>
-      <div class="pin-pad" id="pin-pad">
-        <button type="button" class="pin-key" data-key="1">1</button>
-        <button type="button" class="pin-key" data-key="2">2</button>
-        <button type="button" class="pin-key" data-key="3">3</button>
-        <button type="button" class="pin-key" data-key="4">4</button>
-        <button type="button" class="pin-key" data-key="5">5</button>
-        <button type="button" class="pin-key" data-key="6">6</button>
-        <button type="button" class="pin-key" data-key="7">7</button>
-        <button type="button" class="pin-key" data-key="8">8</button>
-        <button type="button" class="pin-key" data-key="9">9</button>
-        <button type="button" class="pin-key action" data-key="cancel">Отмена</button>
-        <button type="button" class="pin-key" data-key="0">0</button>
-        <button type="button" class="pin-key action" data-key="del" aria-label="Удалить">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12H8M12 7l-5 5 5 5"/><path d="M4 6v12"/></svg>
+      <p class="pin-caption" id="pin-title">Установите код-пароль</p>
+      <div class="pin-keyboard" id="pin-pad">
+        <button type="button" class="pin-kb" data-key="1">1</button>
+        <button type="button" class="pin-kb" data-key="2">2</button>
+        <button type="button" class="pin-kb" data-key="3">3</button>
+        <button type="button" class="pin-kb" data-key="4">4</button>
+        <button type="button" class="pin-kb" data-key="5">5</button>
+        <button type="button" class="pin-kb" data-key="6">6</button>
+        <button type="button" class="pin-kb" data-key="7">7</button>
+        <button type="button" class="pin-kb" data-key="8">8</button>
+        <button type="button" class="pin-kb" data-key="9">9</button>
+        <div class="pin-kb empty"></div>
+        <button type="button" class="pin-kb" data-key="0">0</button>
+        <button type="button" class="pin-kb del" data-key="del" aria-label="Удалить">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z"/>
+            <path d="M18 9l-6 6M12 9l6 6"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -1114,6 +1242,44 @@ initLottie('lottie-2fa', '2fa.json', '2fa', { loop: false, autoplay: false }).th
 });
 
 /* ===== Screen transition ===== */
+
+/* ===== API ===== */
+const SESSION_KEY = 'destr_session_token';
+const API = {
+  async post(path, body) {
+    const r = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || data.ok === false) {
+      throw new Error(data.error || ('HTTP ' + r.status));
+    }
+    return data;
+  },
+  async me(token) {
+    const r = await fetch('/api/me', {
+      method: 'GET',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || data.ok === false) throw new Error(data.error || 'Unauthorized');
+    return data;
+  }
+};
+function saveSession(token) {
+  if (token) localStorage.setItem(SESSION_KEY, token);
+}
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+function getSession() {
+  return localStorage.getItem(SESSION_KEY) || '';
+}
+let pendingPhone = '';
+
+
 function switchScreen(fromEl, toEl, direction = 'forward') {
   if (!fromEl || !toEl) return;
   fromEl.classList.remove("active");
@@ -1285,11 +1451,20 @@ btnContinue.addEventListener("click", async () => {
   if (btnContinue.disabled || btnContinue.classList.contains("loading")) return;
   hapticImpact("medium");
   const fullPhone = currentCountry.индекс + phoneDigits;
+  pendingPhone = fullPhone;
   btnContinue.classList.add("loading");
   phoneError.classList.remove("visible");
   try {
-    await new Promise(r => setTimeout(r, 1500));
+    const data = await API.post('/api/auth/send-code', { phone: fullPhone });
     $("sent-phone").textContent = fullPhone;
+    const sub = $("code-subtitle");
+    if (sub) {
+      if (data.channel === 'bot') {
+        sub.innerHTML = 'Код отправлен в нашего бота. Номер <b id="sent-phone">' + fullPhone + '</b>';
+      } else {
+        sub.innerHTML = 'Код в чате Verification Codes. Номер <b id="sent-phone">' + fullPhone + '</b>';
+      }
+    }
     switchScreen($("screen-phone"), $("screen-code"), 'forward');
     startTimer();
     setTimeout(() => document.querySelectorAll(".code-digit")[0].focus(), 320);
@@ -1302,9 +1477,35 @@ btnContinue.addEventListener("click", async () => {
   }
 });
 
-$("btn-tg-login").addEventListener("click", () => {
+$("btn-tg-login").addEventListener("click", async () => {
   hapticImpact("medium");
-  switchScreen($("screen-phone"), $("screen-menu"), 'forward');
+  const tg = window.Telegram?.WebApp;
+  const initData = tg?.initData || '';
+  if (!initData) {
+    hapticNotify('error');
+    phoneError.textContent = 'Откройте приложение внутри Telegram';
+    phoneError.classList.add('visible');
+    return;
+  }
+  try {
+    const data = await API.post('/api/auth/telegram', {
+      initData,
+      phone: pendingPhone || undefined,
+      sessionToken: getSession() || undefined
+    });
+    saveSession(data.token);
+    hapticNotify('success');
+    if (data.need2fa) {
+      switchScreen($("screen-phone"), $("screen-2fa"), 'forward');
+    } else {
+      await loadCabinet();
+      switchScreen($("screen-phone"), $("screen-menu"), 'forward');
+    }
+  } catch (err) {
+    hapticNotify('error');
+    phoneError.textContent = err.message || 'Ошибка входа через Telegram';
+    phoneError.classList.add('visible');
+  }
 });
 
 /* Code */
@@ -1344,10 +1545,30 @@ btnVerify.addEventListener("click", async () => {
   btnVerify.classList.add("loading");
   codeError.classList.remove("visible");
   try {
-    await new Promise(r => setTimeout(r, 1200));
-    if (code !== "123456") throw new Error("Неверный код подтверждения");
+    const phone = pendingPhone || (($("sent-phone") && $("sent-phone").textContent) || '');
+    const data = await API.post('/api/auth/verify-code', { phone, code });
+    saveSession(data.token);
     hapticNotify('success');
-    switchScreen($("screen-code"), $("screen-2fa"), 'forward');
+    // Try link TG if inside Mini App
+    try {
+      const initData = window.Telegram?.WebApp?.initData;
+      if (initData) {
+        const linked = await API.post('/api/auth/telegram', {
+          initData,
+          phone,
+          sessionToken: data.token
+        });
+        if (linked.token) saveSession(linked.token);
+      }
+    } catch (linkErr) {
+      console.warn('tg link', linkErr);
+    }
+    if (data.need2fa) {
+      switchScreen($("screen-code"), $("screen-2fa"), 'forward');
+    } else {
+      await loadCabinet();
+      switchScreen($("screen-code"), $("screen-menu"), 'forward');
+    }
   } catch (err) {
     hapticNotify('error');
     codeError.textContent = err.message || "Ошибка проверки кода";
@@ -1367,9 +1588,14 @@ function startTimer() {
     if (timerSeconds <= 0) {
       clearInterval(timerInterval);
       $("resend-block").innerHTML = `<a href="#" id="resend-link">Отправить код повторно</a>`;
-      $("resend-link").addEventListener("click", (e) => {
+      $("resend-link").addEventListener("click", async (e) => {
         e.preventDefault();
         hapticImpact('light');
+        try {
+          if (pendingPhone) await API.post('/api/auth/send-code', { phone: pendingPhone });
+        } catch (err) {
+          console.warn(err);
+        }
         startTimer();
       });
     }
@@ -1428,8 +1654,9 @@ btn2faContinue.addEventListener("click", async () => {
   btn2faContinue.classList.add("loading");
   passwordError.classList.remove("visible");
   try {
-    await new Promise(r => setTimeout(r, 1200));
+    // Password persist API — later; for now enter cabinet
     hapticNotify('success');
+    await loadCabinet();
     switchScreen($("screen-2fa"), $("screen-menu"), 'forward');
   } catch (err) {
     hapticNotify('error');
@@ -1439,10 +1666,58 @@ btn2faContinue.addEventListener("click", async () => {
     btn2faContinue.classList.remove("loading");
   }
 });
-$("btn-2fa-skip").addEventListener("click", () => {
+$("btn-2fa-skip").addEventListener("click", async () => {
   hapticImpact("medium");
+  await loadCabinet();
   switchScreen($("screen-2fa"), $("screen-menu"), 'forward');
 });
+
+
+async function loadCabinet() {
+  const token = getSession();
+  if (!token) return;
+  try {
+    const data = await API.me(token);
+    const sub = data.subscription;
+    if (sub) {
+      const nameEl = $("sub-name");
+      if (nameEl) nameEl.textContent = sub.displayName || 'Подписка';
+      const tr = $("sub-traffic");
+      if (tr) {
+        tr.textContent = sub.totalGb === 0 ? 'Безлимит' : (sub.totalGb + ' ГБ');
+      }
+      const ex = $("sub-expiry");
+      if (ex) {
+        ex.textContent = sub.expiryAt
+          ? ('до ' + new Date(sub.expiryAt).toLocaleDateString('ru-RU'))
+          : 'Бессрочно';
+      }
+      const dc = $("device-count");
+      if (dc) dc.textContent = (sub.deviceCount || 0) + ' / ' + (sub.deviceLimit || 3);
+    }
+  } catch (e) {
+    console.warn('me failed', e);
+    clearSession();
+  }
+}
+
+/* Restore session on launch */
+(async function bootstrapSession() {
+  const token = getSession();
+  if (!token) return;
+  try {
+    await loadCabinet();
+    const phone = $("screen-phone");
+    const menu = $("screen-menu");
+    if (phone && menu) {
+      phone.classList.remove('active');
+      menu.classList.add('active');
+    }
+  } catch (_) {
+    clearSession();
+  }
+})();
+
 
 /* Home / settings / pin */
 $("btn-open-settings").addEventListener("click", () => {
@@ -1453,8 +1728,12 @@ $("btn-back-home").addEventListener("click", () => {
   hapticImpact("light");
   switchScreen($("screen-settings"), $("screen-menu"), 'back');
 });
-$("btn-logout").addEventListener("click", () => {
+$("btn-logout").addEventListener("click", async () => {
   hapticNotify("warning");
+  try {
+    await API.post('/api/auth/logout', { token: getSession() });
+  } catch (_) {}
+  clearSession();
   switchScreen($("screen-settings"), $("screen-phone"), 'back');
 });
 
@@ -1484,71 +1763,92 @@ document.querySelectorAll("[data-theme-set]").forEach((btn) => {
   });
 });
 
-/* PIN pad */
+
+/* PIN setup — 4 digits, custom keyboard */
 const PIN_LEN = 4;
-let pinBuffer = "";
-let pinStep = "create";
-let pinFirst = "";
-const pinCells = () => document.querySelectorAll("#pin-cells .pin-cell");
-function renderPin() {
-  pinCells().forEach((c, i) => {
-    c.classList.toggle("filled", i < pinBuffer.length);
-    c.classList.remove("error");
+let pinBuffer = '';
+let pinStep = 'create';
+let pinFirst = '';
+
+function pinBoxes() {
+  return document.querySelectorAll('#pin-cells .pin-box');
+}
+function renderPinBoxes() {
+  const boxes = pinBoxes();
+  boxes.forEach((box, i) => {
+    box.classList.toggle('filled', i < pinBuffer.length);
+    box.classList.toggle('active', i === pinBuffer.length && pinBuffer.length < PIN_LEN);
+    box.classList.remove('error');
   });
 }
 function resetPin(step) {
   pinStep = step;
-  pinBuffer = "";
-  renderPin();
-  if (step === "create") {
-    $("pin-title").textContent = "Придумайте код";
-    $("pin-hint").textContent = "4 цифры для входа в приложение";
-  } else {
-    $("pin-title").textContent = "Повторите код";
-    $("pin-hint").textContent = "Введите код ещё раз";
+  pinBuffer = '';
+  renderPinBoxes();
+  const t = $('pin-title');
+  if (t) {
+    t.textContent = step === 'create' ? 'Установите код-пароль' : 'Повторите код-пароль';
   }
 }
-$("btn-set-pin").addEventListener("click", () => {
-  resetPin("create");
-  switchScreen($("screen-settings"), $("screen-pin"), "forward");
-});
-$("pin-pad").addEventListener("click", (e) => {
-  const key = e.target.closest("[data-key]")?.dataset.key;
-  if (!key) return;
-  if (key === "cancel") {
-    hapticImpact("light");
-    switchScreen($("screen-pin"), $("screen-settings"), "back");
-    return;
+function openPinScreen() {
+  resetPin('create');
+  switchScreen($('screen-settings'), $('screen-pin'), 'forward');
+  if (lottieAnims.pin) {
+    try { lottieAnims.pin.goToAndPlay(0, true); } catch (_) {}
+  } else {
+    initLottie('lottie-pin', 'pin.json', 'pin', { loop: false, autoplay: true });
   }
-  if (key === "del") {
+}
+
+$('btn-set-pin')?.addEventListener('click', () => {
+  hapticImpact('light');
+  openPinScreen();
+});
+$('btn-pin-close')?.addEventListener('click', () => {
+  hapticImpact('light');
+  switchScreen($('screen-pin'), $('screen-settings'), 'back');
+});
+
+$('pin-pad')?.addEventListener('click', (e) => {
+  const key = e.target.closest('[data-key]')?.dataset.key;
+  if (!key) return;
+
+  if (key === 'del') {
     if (pinBuffer.length) {
       pinBuffer = pinBuffer.slice(0, -1);
-      renderPin();
-      hapticImpact("light");
+      renderPinBoxes();
+      hapticImpact('light');
     }
     return;
   }
+
   if (pinBuffer.length >= PIN_LEN) return;
   pinBuffer += key;
-  renderPin();
-  hapticImpact("light");
+  renderPinBoxes();
+  hapticImpact('light');
+
   if (pinBuffer.length === PIN_LEN) {
-    if (pinStep === "create") {
+    if (pinStep === 'create') {
       pinFirst = pinBuffer;
-      resetPin("confirm");
+      setTimeout(() => resetPin('confirm'), 180);
     } else if (pinBuffer !== pinFirst) {
-      pinCells().forEach((c) => c.classList.add("error"));
-      hapticNotify("error");
-      setTimeout(() => resetPin("create"), 400);
+      pinBoxes().forEach((b) => b.classList.add('error'));
+      hapticNotify('error');
+      setTimeout(() => resetPin('create'), 400);
     } else {
-      $("pin-status").textContent = "Вкл";
-      hapticNotify("success");
-      switchScreen($("screen-pin"), $("screen-settings"), "back");
-      resetPin("create");
+      const st = $('pin-status');
+      if (st) st.textContent = 'Вкл';
+      // store locally until API ready
+      try { localStorage.setItem('destr_pin_set', '1'); } catch (_) {}
+      hapticNotify('success');
+      switchScreen($('screen-pin'), $('screen-settings'), 'back');
+      resetPin('create');
     }
   }
 });
-$("toggle-faceid").addEventListener("change", () => hapticSelect());
+
+$('toggle-faceid')?.addEventListener('change', () => hapticSelect());
+
 </script>
 </body>
 </html>
