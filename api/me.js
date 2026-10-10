@@ -1,5 +1,6 @@
 import { migrate, getDb } from '../lib/db.js';
 import { getSessionUser } from '../lib/auth.js';
+import { getClientTraffic, getPanels } from '../lib/xui.js';
 
 function getToken(req) {
   const auth = req.headers.authorization || '';
@@ -21,13 +22,13 @@ export default async function handler(req, res) {
     }
 
     const db = getDb();
-    const sub = await db.execute({
+    const subR = await db.execute({
       sql: `SELECT * FROM subscriptions WHERE user_id = ? ORDER BY id DESC LIMIT 1`,
       args: [user.id]
     });
-
-    const subscription = sub.rows[0] || null;
+    const subscription = subR.rows[0] || null;
     let deviceCount = 0;
+    let usedBytes = 0;
 
     if (subscription) {
       const d = await db.execute({
@@ -35,7 +36,22 @@ export default async function handler(req, res) {
         args: [subscription.id]
       });
       deviceCount = Number(d.rows[0]?.c || 0);
+
+      // sum traffic from panels
+      const panels = getPanels();
+      for (const panel of Object.values(panels)) {
+        if (!panel?.url) continue;
+        try {
+          const t = await getClientTraffic(panel, subscription.xui_email);
+          usedBytes += t.total || 0;
+        } catch (e) {
+          console.warn('traffic', e.message);
+        }
+      }
     }
+
+    const usedGb = usedBytes / (1024 * 1024 * 1024);
+    const totalGb = subscription ? Number(subscription.total_gb || 0) : 0;
 
     return res.status(200).json({
       ok: true,
@@ -52,12 +68,13 @@ export default async function handler(req, res) {
         ? {
             id: subscription.id,
             displayName: subscription.display_name,
-            totalGb: subscription.total_gb,
+            totalGb,
+            usedGb: Math.round(usedGb * 100) / 100,
+            usedBytes,
             expiryAt: subscription.expiry_at,
             deviceLimit: subscription.device_limit,
             deviceCount,
             status: subscription.status,
-            // sub URL built on client from origin + token
             subToken: subscription.sub_token
           }
         : null

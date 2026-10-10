@@ -1738,12 +1738,30 @@ $("btn-logout").addEventListener("click", async () => {
 });
 
 const sheetDevice = $("sheet-device");
-$("btn-add-device").addEventListener("click", () => {
+$("btn-add-device").addEventListener("click", async () => {
   hapticImpact("medium");
-  sheetDevice.classList.add("open");
+  try {
+    const data = await API.post('/api/device/add', { token: getSession() });
+    const dc = $("device-count");
+    if (dc) dc.textContent = data.deviceCount + ' / ' + data.deviceLimit;
+    window.__lastSubUrl = data.subscriptionUrl;
+    try {
+      await navigator.clipboard.writeText(data.subscriptionUrl);
+    } catch (_) {}
+    sheetDevice.classList.add("open");
+  } catch (err) {
+    hapticNotify('error');
+    alert(err.message || 'Не удалось добавить устройство');
+  }
+});
+$("btn-open-happ")?.addEventListener("click", () => {
+  const url = window.__lastSubUrl;
+  if (url) {
+    window.location.href = 'happ://add/' + encodeURIComponent(url);
+  }
+  sheetDevice.classList.remove("open");
 });
 $("btn-close-sheet").addEventListener("click", () => sheetDevice.classList.remove("open"));
-$("btn-open-happ").addEventListener("click", () => sheetDevice.classList.remove("open"));
 sheetDevice.addEventListener("click", (e) => { if (e.target === sheetDevice) sheetDevice.classList.remove("open"); });
 
 /* Theme */

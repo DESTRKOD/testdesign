@@ -1,21 +1,18 @@
-# Destr VPN — Logic layer
+# Destr VPN — working core
 
-## Env (Vercel)
-
+## Env
 ```
-# App
-APP_SECRET=минимум_32_случайных_символа
-ADMIN_API_KEY=секрет_для_?admin=
+APP_SECRET=
+ADMIN_API_KEY=
 ADMIN_TG_ID=2112942356
+ADMIN_ALLOW_KEY_ONLY=1
 
-# Telegram
-BOT_TOKEN=123:ABC...
+BOT_TOKEN=
+TELEGRAM_GATEWAY_TOKEN=
 
-# Turso
-TURSO_DATABASE_URL=libsql://xxx.turso.io
-TURSO_AUTH_TOKEN=...
+TURSO_DATABASE_URL=
+TURSO_AUTH_TOKEN=
 
-# 3x-ui (already used)
 DE_PANEL_URL=
 DE_API_TOKEN=
 DE_INBOUND_ID=1
@@ -27,33 +24,25 @@ RU_API_TOKEN=
 RU_INBOUND_ID=1
 RU_SERVER=
 RU_SERVER_NAME=
-
-# Dev only: return code in API response
-AUTH_DEV_EXPOSE_CODE=1
 ```
 
-## Auth API
+`ADMIN_ALLOW_KEY_ONLY=1` — временно для curl без Telegram (потом выключить).
 
-| Method | Path | Body | Result |
-|--------|------|------|--------|
-| POST | `/api/auth/send-code` | `{ phone }` | sends code |
-| POST | `/api/auth/verify-code` | `{ phone, code }` | `{ token, need2fa, user }` |
-| POST | `/api/auth/telegram` | `{ initData }` | `{ token, user }` |
-| POST | `/api/auth/logout` | `{ token }` or Bearer | ok |
-| GET/POST | `/api/me` | Bearer token | user + subscription |
+## Admin API
+`POST /api/admin/subscription`
+Header: `x-admin-key: ADMIN_API_KEY`
 
-## Session
-
-Client stores `token` in `localStorage` and sends:
-
-```
-Authorization: Bearer <token>
+```json
+{ "action": "create", "userId": 1, "name": "Иван", "totalGb": 100, "days": 30, "deviceLimit": 3 }
+{ "action": "edit", "userId": 1, "totalGb": 200, "days": 60 }
+{ "action": "block", "userId": 1 }
+{ "action": "unblock", "userId": 1 }
+{ "action": "get", "userId": 1 }
 ```
 
-## Next steps
+`GET/POST /api/admin/users` — список / поиск
 
-1. Turso DB create + env
-2. Wire frontend login to these endpoints
-3. Admin API: create / edit / block subscription + 3x-ui
-4. Device add + traffic from 3x-ui
-5. Bot notifications
+## User
+`POST /api/device/add` — Bearer session → subscription URL  
+`GET /api/sub?token=` — VLESS links  
+`GET /api/me` — кабинет

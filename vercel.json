@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/sub/:token*",
+      "destination": "/api/sub?token=:token*"
+    }
+  ]
+}
