@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>DxS Connect</title>
+  <meta name="destr-build" content="2026-10-10-v5">
   <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
   <style>
@@ -1249,17 +1250,47 @@
   </div>
 
 
-  <!-- Devices list sheet -->
-  <div class="sheet-overlay" id="sheet-devices">
-    <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
-      <div class="sheet-handle"></div>
-      <h3 class="sheet-title">Устройства</h3>
-      <div id="devices-list-box" style="overflow-y:auto;flex:1;margin-bottom:12px"></div>
-      <button type="button" class="btn secondary" id="btn-close-devices"><span class="btn-text">Закрыть</span></button>
+
+
+  <!-- SCREEN: Devices -->
+  <div class="screen" id="screen-devices">
+    <div class="nav-header">
+      <div class="nav-header-side">
+        <button type="button" class="icon-btn" id="btn-back-devices" aria-label="Назад">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="nav-header-title">Устройства</div>
+      <div class="nav-header-side"></div>
+    </div>
+    <div id="devices-list-box" style="flex:1;overflow-y:auto;padding-bottom:16px"></div>
+  </div>
+
+  <!-- SCREEN: Phone bind -->
+  <div class="screen" id="screen-phone-bind">
+    <div class="nav-header">
+      <div class="nav-header-side">
+        <button type="button" class="icon-btn" id="btn-back-phone-bind" aria-label="Назад">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="nav-header-title">Номер телефона</div>
+      <div class="nav-header-side"></div>
+    </div>
+    <p style="font-size:15px;color:var(--tg-theme-hint-color);line-height:1.4;margin:8px 0 16px">
+      Номер нужен, чтобы коды входа приходили в нашего бота. Формат: +79001234567
+    </p>
+    <input id="settings-phone-input" type="tel" inputmode="tel" placeholder="+79001234567" class="phone-input" style="width:100%;height:52px;background:var(--tg-theme-secondary-bg-color);border-radius:12px;padding:0 16px;font-size:18px;border:none;outline:none;margin-bottom:8px" />
+    <p id="phone-save-msg" class="error-text" style="text-align:center;min-height:22px"></p>
+    <div class="bottom">
+      <button type="button" class="btn" id="btn-phone-save">
+        <span class="btn-text">Сохранить</span>
+        <div class="spinner"></div>
+      </button>
     </div>
   </div>
 
-  <!-- Rename device sheet -->
+  <!-- Rename device sheet (small form stays sheet) -->
   <div class="sheet-overlay" id="sheet-rename">
     <div class="sheet">
       <div class="sheet-handle"></div>
@@ -1270,20 +1301,9 @@
     </div>
   </div>
 
-  <!-- Phone sheet -->
-  <div class="sheet-overlay" id="sheet-phone">
-    <div class="sheet">
-      <div class="sheet-handle"></div>
-      <h3 class="sheet-title">Номер телефона</h3>
-      <p class="sheet-text">Нужен, чтобы коды входа приходили в нашего бота</p>
-      <input id="settings-phone-input" type="tel" inputmode="tel" placeholder="+79001234567" class="phone-input" style="width:100%;height:48px;background:var(--tg-theme-secondary-bg-color);border-radius:12px;padding:0 14px;font-size:17px;border:none;outline:none;margin-bottom:14px" />
-      <p id="phone-save-msg" class="error-text" style="text-align:center;min-height:20px"></p>
-      <button type="button" class="btn" id="btn-phone-save"><span class="btn-text">Сохранить</span><div class="spinner"></div></button>
-      <button type="button" class="btn secondary" id="btn-phone-cancel" style="margin-top:10px"><span class="btn-text">Отмена</span></button>
-    </div>
-  </div>
-
 <script>
+window.__DESTR_BUILD = "2026-10-10-v5";
+console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
   document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
@@ -2469,12 +2489,29 @@ function escapeHtml(s) {
   })[c]);
 }
 
+
+document.getElementById('btn-back-devices')?.addEventListener('click', () => {
+  hapticImpact('light');
+  const from = document.getElementById('screen-devices');
+  const to = document.getElementById('screen-menu');
+  if (from && to) switchScreen(from, to, 'back');
+});
+document.getElementById('btn-back-phone-bind')?.addEventListener('click', () => {
+  hapticImpact('light');
+  const from = document.getElementById('screen-phone-bind');
+  const to = document.getElementById('screen-settings');
+  if (from && to) switchScreen(from, to, 'back');
+});
+
 document.getElementById('btn-devices-list')?.addEventListener('click', () => {
   hapticImpact('light');
   openDevicesList();
+  const from = document.querySelector('.screen.active');
+  const to = document.getElementById('screen-devices');
+  if (from && to) switchScreen(from, to, 'forward');
 });
 document.getElementById('btn-close-devices')?.addEventListener('click', () => {
-  document.getElementById('sheet-devices')?.classList.remove('open');
+  /* devices is full screen */
 });
 document.getElementById('sheet-devices')?.addEventListener('click', (e) => {
   if (e.target.id === 'sheet-devices') e.currentTarget.classList.remove('open');
@@ -2540,34 +2577,32 @@ function openInHapp(subUrl) {
     alert('Сначала нажмите «Добавить устройство»');
     return;
   }
-  try { navigator.clipboard.writeText(subUrl); } catch (_) {}
   const tg = window.Telegram?.WebApp;
-  // Mini App blocks most custom schemes (happ://). Prefer openLink on https, else copy + hint.
-  if (tg?.openLink && /^https?:\/\//i.test(subUrl)) {
+  const inMiniApp = !!(tg && (tg.initData || window.TelegramWebviewProxy));
+  const bridge =
+    location.origin +
+    '/add.html?url=' +
+    encodeURIComponent(subUrl);
+
+  if (inMiniApp && tg?.openLink) {
+    // Leave Mini App WebView → our bridge page → user taps → Happ
     try {
-      tg.openLink(subUrl, { try_instant_view: false });
+      tg.openLink(bridge, { try_instant_view: false });
       return;
     } catch (_) {}
   }
-  // Try happ:// anyway (may be blocked inside Mini App)
-  try {
-    const a = document.createElement('a');
-    a.href = 'happ://add/' + encodeURIComponent(subUrl);
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } catch (_) {}
-  // Always show fallback: user can paste in Happ
-  if (tg?.showPopup) {
-    tg.showPopup({
-      title: 'Подписка скопирована',
-      message: 'Из Mini App нельзя надёжно открыть Happ. Ссылка в буфере — вставьте её в Happ → Импорт.',
-      buttons: [{ type: 'ok' }]
-    });
-  } else {
-    alert('Ссылка скопирована. Вставьте её в Happ (из Mini App прямой переход часто блокируется).');
+
+  if (inMiniApp) {
+    // Fallback: same-tab navigation to bridge
+    location.href = bridge;
+    return;
   }
+
+  // Regular browser: straight to Happ
+  try { navigator.clipboard.writeText(subUrl); } catch (_) {}
+  try {
+    location.href = 'happ://add/' + encodeURIComponent(subUrl);
+  } catch (_) {}
 }
 
 /* Fix add device sheet buttons */
@@ -2615,12 +2650,14 @@ document.getElementById('btn-set-phone')?.addEventListener('click', () => {
   const input = document.getElementById('settings-phone-input');
   const status = document.getElementById('phone-status')?.textContent || '';
   if (input && status && status !== 'не указан') {
-    input.value = status;
+    input.value = status.startsWith('+') ? status : status;
   }
-  document.getElementById('sheet-phone')?.classList.add('open');
+  const from = document.querySelector('.screen.active');
+  const to = document.getElementById('screen-phone-bind');
+  if (from && to) switchScreen(from, to, 'forward');
 });
 document.getElementById('btn-phone-cancel')?.addEventListener('click', () => {
-  document.getElementById('sheet-phone')?.classList.remove('open');
+  /* phone is full screen */
 });
 document.getElementById('sheet-phone')?.addEventListener('click', (e) => {
   if (e.target.id === 'sheet-phone') e.currentTarget.classList.remove('open');
@@ -2636,7 +2673,9 @@ document.getElementById('btn-phone-save')?.addEventListener('click', async () =>
     hapticNotify('success');
     const st = document.getElementById('phone-status');
     if (st) st.textContent = data.phone;
-    document.getElementById('sheet-phone')?.classList.remove('open');
+    const from = document.getElementById('screen-phone-bind');
+    const to = document.getElementById('screen-settings');
+    if (from && to) switchScreen(from, to, 'back');
   } catch (e) {
     hapticNotify('error');
     if (msg) {

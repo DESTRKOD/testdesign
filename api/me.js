@@ -9,6 +9,13 @@ function getToken(req) {
   return body.token || req.query?.token || '';
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve({ up: 0, down: 0, total: 0 }), ms))
+  ]);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
@@ -37,22 +44,27 @@ export default async function handler(req, res) {
       });
       deviceCount = Number(d.rows[0]?.c || 0);
 
-      // sum traffic from panels
-      const panels = getPanels();
-      for (const panel of Object.values(panels)) {
-        if (!panel?.url) continue;
-        try {
-          const t = await getClientTraffic(panel, subscription.xui_email);
-          usedBytes += t.total || 0;
-        } catch (e) {
-          console.warn('traffic', e.message);
-        }
-      }
+      // traffic optional — parallel, max 2.5s total so UI stays fast
+      try {
+        const panels = Object.values(getPanels()).filter((p) => p?.url);
+        const parts = await Promise.all(
+          panels.map((panel) =>
+            withTimeout(
+              getClientTraffic(panel, subscription.xui_email).catch(() => ({
+                total: 0
+              })),
+              2500
+            )
+          )
+        );
+        usedBytes = parts.reduce((s, t) => s + (t.total || 0), 0);
+      } catch (_) {}
     }
 
     const usedGb = usedBytes / (1024 * 1024 * 1024);
     const totalGb = subscription ? Number(subscription.total_gb || 0) : 0;
 
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       ok: true,
       user: {

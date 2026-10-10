@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     if (!userRow) {
       return res.status(404).json({
         ok: false,
-        error: 'Ваш номер ещё не зарегистрирован. Войдите через Telegram',
+        error: 'Номер не найден. Войдите через Telegram, затем привяжите номер в Настройках.',
         code: 'NOT_REGISTERED'
       });
     }
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     if (!userRow.tg_id) {
       return res.status(400).json({
         ok: false,
-        error: 'Номер не привязан к Telegram. Войдите через Telegram',
+        error: 'К этому номеру ещё не привязан Telegram. Войдите через Telegram в приложении и привяжите номер в Настройках.',
         code: 'NO_TG'
       });
     }

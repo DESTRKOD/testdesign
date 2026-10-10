@@ -26,14 +26,54 @@ export default async function handler(req, res) {
     }
 
     const db = getDb();
+
+    // Same user already has this phone
+    if (user.phone === phone) {
+      return res.status(200).json({ ok: true, phone, merged: false });
+    }
+
     const other = await db.execute({
-      sql: `SELECT id FROM users WHERE phone = ? AND id != ?`,
+      sql: `SELECT * FROM users WHERE phone = ? AND id != ?`,
       args: [phone, user.id]
     });
-    if (other.rows[0]) {
-      return res.status(409).json({
-        ok: false,
-        error: 'Этот номер уже привязан к другому аккаунту'
+    const otherUser = other.rows[0];
+
+    if (otherUser) {
+      // Other account has this phone AND a different tg_id → real conflict
+      if (
+        otherUser.tg_id &&
+        user.tg_id &&
+        Number(otherUser.tg_id) !== Number(user.tg_id)
+      ) {
+        return res.status(409).json({
+          ok: false,
+          error:
+            'Этот номер уже привязан к другому Telegram-аккаунту. Войдите тем аккаунтом или обратитесь к админу.'
+        });
+      }
+
+      // Merge: phone-only account (or same tg) into current session user
+      // Move subscriptions, devices, sessions from other → current
+      await db.execute({
+        sql: `UPDATE subscriptions SET user_id = ? WHERE user_id = ?`,
+        args: [user.id, otherUser.id]
+      });
+      await db.execute({
+        sql: `UPDATE devices SET user_id = ? WHERE user_id = ?`,
+        args: [user.id, otherUser.id]
+      });
+      await db.execute({
+        sql: `DELETE FROM sessions WHERE user_id = ?`,
+        args: [otherUser.id]
+      });
+      // free phone on other row then delete other user
+      await db.execute({
+        sql: `UPDATE users SET phone = NULL WHERE id = ?`,
+        args: [otherUser.id]
+      });
+      await db.execute({
+        sql: `DELETE FROM users WHERE id = ?`,
+        args: [otherUser.id]
       });
     }
 
@@ -42,7 +82,7 @@ export default async function handler(req, res) {
       args: [phone, user.id]
     });
 
-    return res.status(200).json({ ok: true, phone });
+    return res.status(200).json({ ok: true, phone, merged: !!otherUser });
   } catch (e) {
     console.error('phone', e);
     return res.status(500).json({ ok: false, error: e.message });
