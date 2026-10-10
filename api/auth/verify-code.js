@@ -1,16 +1,13 @@
-import { migrate } from '../../lib/db.js';
+import { migrate, getDb } from '../../lib/db.js';
 import {
-  verifyAuthCode,
+  hashSecret,
+  timingSafeEqualStr,
   findOrCreateUserByPhone,
   createSession
 } from '../../lib/auth.js';
+import { toE164, checkVerificationStatus } from '../../lib/gateway.js';
 
-function normalizePhone(raw) {
-  const digits = String(raw || '').replace(/\D/g, '');
-  if (digits.length < 10) return null;
-  if (String(raw).trim().startsWith('+')) return '+' + digits;
-  return '+' + digits;
-}
+const CODE_MAX_ATTEMPTS = 5;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -20,18 +17,101 @@ export default async function handler(req, res) {
   try {
     await migrate();
 
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-    const phone = normalizePhone(body.phone);
+    const body =
+      typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    const phone = toE164(body.phone);
     const code = String(body.code || '').replace(/\D/g, '');
 
-    if (!phone || code.length !== 6) {
+    if (!phone || code.length < 4 || code.length > 8) {
       return res.status(400).json({ ok: false, error: 'Некорректные данные' });
     }
 
-    const check = await verifyAuthCode(phone, code);
-    if (!check.ok) {
-      return res.status(400).json({ ok: false, error: check.error });
+    const db = getDb();
+    const r = await db.execute({
+      sql: `SELECT * FROM auth_codes WHERE phone = ? ORDER BY id DESC LIMIT 1`,
+      args: [phone]
+    });
+    const row = r.rows[0];
+
+    if (!row) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Код не найден. Запросите новый.'
+      });
     }
+
+    if (new Date(row.expires_at) < new Date()) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Код истёк. Запросите новый.'
+      });
+    }
+
+    if (Number(row.attempts) >= CODE_MAX_ATTEMPTS) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Слишком много попыток. Запросите новый код.'
+      });
+    }
+
+    let valid = false;
+
+    if (row.channel === 'gateway' && row.gateway_request_id) {
+      try {
+        const status = await checkVerificationStatus(
+          row.gateway_request_id,
+          code
+        );
+        const st =
+          status?.verification_status?.status ||
+          status?.status ||
+          '';
+        valid = st === 'code_valid';
+
+        if (st === 'code_max_attempts_exceeded' || st === 'expired') {
+          await db.execute({
+            sql: 'DELETE FROM auth_codes WHERE phone = ?',
+            args: [phone]
+          });
+          return res.status(400).json({
+            ok: false,
+            error:
+              st === 'expired'
+                ? 'Код истёк. Запросите новый.'
+                : 'Превышено число попыток. Запросите новый код.'
+          });
+        }
+      } catch (e) {
+        console.error('checkVerificationStatus', e.message);
+        await db.execute({
+          sql: 'UPDATE auth_codes SET attempts = attempts + 1 WHERE id = ?',
+          args: [row.id]
+        });
+        return res.status(400).json({
+          ok: false,
+          error: 'Неверный код подтверждения'
+        });
+      }
+    } else {
+      const expected = row.code_hash || row.code;
+      valid = expected && timingSafeEqualStr(expected, hashSecret(code));
+    }
+
+    if (!valid) {
+      await db.execute({
+        sql: 'UPDATE auth_codes SET attempts = attempts + 1 WHERE id = ?',
+        args: [row.id]
+      });
+      return res.status(400).json({
+        ok: false,
+        error: 'Неверный код подтверждения'
+      });
+    }
+
+    await db.execute({
+      sql: 'DELETE FROM auth_codes WHERE phone = ?',
+      args: [phone]
+    });
 
     const user = await findOrCreateUserByPhone(phone);
     const session = await createSession(
@@ -39,14 +119,11 @@ export default async function handler(req, res) {
       req.headers['user-agent'] || ''
     );
 
-    // Need 2FA setup if no password yet
-    const need2fa = !user.password_hash;
-
     return res.status(200).json({
       ok: true,
       token: session.token,
       expiresAt: session.expiresAt,
-      need2fa,
+      need2fa: !user.password_hash,
       user: {
         id: user.id,
         phone: user.phone,
@@ -56,6 +133,9 @@ export default async function handler(req, res) {
     });
   } catch (e) {
     console.error('verify-code', e);
-    return res.status(500).json({ ok: false, error: e.message || 'Server error' });
+    return res.status(500).json({
+      ok: false,
+      error: e.message || 'Server error'
+    });
   }
 }
