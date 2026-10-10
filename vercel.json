@@ -2,6 +2,14 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/admin/set-phone",
+      "destination": "/api/admin?action=set-phone"
+    },
+    {
+      "source": "/api/admin/user",
+      "destination": "/api/admin?action=user"
+    },
+    {
       "source": "/add",
       "destination": "/add.html"
     },
