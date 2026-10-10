@@ -1,9 +1,13 @@
 {
   "version": 2,
   "rewrites": [
-    {
-      "source": "/api/sub/:token*",
-      "destination": "/api/sub?token=:token*"
-    }
+    { "source": "/api/auth/:action", "destination": "/api/auth?action=:action" },
+    { "source": "/api/admin/panels-check", "destination": "/api/admin?action=panels-check" },
+    { "source": "/api/admin/users", "destination": "/api/admin?action=users" },
+    { "source": "/api/admin/subscription", "destination": "/api/admin?action=subscription" },
+    { "source": "/api/admin/:action", "destination": "/api/admin?action=:action" },
+    { "source": "/api/device/:action", "destination": "/api/device?action=:action" },
+    { "source": "/api/account/:action", "destination": "/api/account?action=:action" },
+    { "source": "/api/sub/:token*", "destination": "/api/sub?token=:token*" }
   ]
 }

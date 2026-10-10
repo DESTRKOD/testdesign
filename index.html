@@ -1039,16 +1039,17 @@
     <div class="section">
       <div class="section-label">Устройства</div>
       <div class="cell-group">
-        <div class="cell">
+        <button type="button" class="cell" id="btn-devices-list">
           <div class="cell-icon blue">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M11 17h2"/></svg>
           </div>
           <div class="cell-body">
             <div class="cell-title">Добавлено устройств</div>
-            <div class="cell-subtitle">лимит по тарифу</div>
+            <div class="cell-subtitle">нажмите, чтобы управлять</div>
           </div>
           <div class="cell-value" id="device-count">0 / 0</div>
-        </div>
+          <svg class="cell-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
       </div>
     </div>
     <div class="bottom-bar">
@@ -1088,6 +1089,16 @@
           <div class="cell-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 14.5A8.5 8.5 0 1110.5 3a7 7 0 0010.5 11.5z"/></svg></div>
           <div class="cell-body"><div class="cell-title">Тёмная</div></div>
           <div class="cell-value theme-check hidden" data-check="dark"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--tg-theme-button-color)" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
+        </button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Аккаунт</div>
+      <div class="cell-group">
+        <button type="button" class="cell" id="btn-set-phone">
+          <div class="cell-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg></div>
+          <div class="cell-body"><div class="cell-title">Номер телефона</div><div class="cell-subtitle" id="phone-status">не указан</div></div>
+          <svg class="cell-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>
     </div>
@@ -1234,6 +1245,41 @@
       <p class="sheet-text">Ссылка скопирована. Откройте её в Happ.</p>
       <button type="button" class="btn" id="btn-open-happ"><span class="btn-text">Открыть в Happ</span></button>
       <button type="button" class="btn secondary" id="btn-close-sheet" style="margin-top:10px"><span class="btn-text">Готово</span></button>
+    </div>
+  </div>
+
+
+  <!-- Devices list sheet -->
+  <div class="sheet-overlay" id="sheet-devices">
+    <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
+      <div class="sheet-handle"></div>
+      <h3 class="sheet-title">Устройства</h3>
+      <div id="devices-list-box" style="overflow-y:auto;flex:1;margin-bottom:12px"></div>
+      <button type="button" class="btn secondary" id="btn-close-devices"><span class="btn-text">Закрыть</span></button>
+    </div>
+  </div>
+
+  <!-- Rename device sheet -->
+  <div class="sheet-overlay" id="sheet-rename">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3 class="sheet-title">Имя устройства</h3>
+      <input id="rename-input" class="phone-input" style="width:100%;height:48px;background:var(--tg-theme-secondary-bg-color);border-radius:12px;padding:0 14px;font-size:17px;border:none;outline:none;margin-bottom:14px" maxlength="64" />
+      <button type="button" class="btn" id="btn-rename-save"><span class="btn-text">Сохранить</span></button>
+      <button type="button" class="btn secondary" id="btn-rename-cancel" style="margin-top:10px"><span class="btn-text">Отмена</span></button>
+    </div>
+  </div>
+
+  <!-- Phone sheet -->
+  <div class="sheet-overlay" id="sheet-phone">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3 class="sheet-title">Номер телефона</h3>
+      <p class="sheet-text">Нужен, чтобы коды входа приходили в нашего бота</p>
+      <input id="settings-phone-input" type="tel" inputmode="tel" placeholder="+79001234567" class="phone-input" style="width:100%;height:48px;background:var(--tg-theme-secondary-bg-color);border-radius:12px;padding:0 14px;font-size:17px;border:none;outline:none;margin-bottom:14px" />
+      <p id="phone-save-msg" class="error-text" style="text-align:center;min-height:20px"></p>
+      <button type="button" class="btn" id="btn-phone-save"><span class="btn-text">Сохранить</span><div class="spinner"></div></button>
+      <button type="button" class="btn secondary" id="btn-phone-cancel" style="margin-top:10px"><span class="btn-text">Отмена</span></button>
     </div>
   </div>
 
@@ -1796,6 +1842,8 @@ async function loadCabinet() {
   try {
     const data = await API.me(token);
     const sub = data.subscription;
+    const phoneSt = document.getElementById('phone-status');
+    if (phoneSt) phoneSt.textContent = data.user?.phone || 'не указан';
     const empty = $("home-empty");
     const block = $("home-sub");
     if (!sub) {
@@ -1867,22 +1915,6 @@ function hashPin(pin) {
   return 'p' + Math.abs(h).toString(16) + '_' + s.length;
 }
 
-async function tryBiometricUnlock() {
-  const tg = window.Telegram?.WebApp;
-  const Bio = tg?.BiometricManager;
-  if (!Bio) return false;
-  try {
-    if (!Bio.isInited) {
-      await new Promise((resolve) => Bio.init(resolve));
-    }
-    if (!Bio.isBiometricAvailable || !Bio.isAccessGranted) return false;
-    return await new Promise((resolve) => {
-      Bio.authenticate({ reason: 'Вход в Destr VPN' }, (ok) => resolve(!!ok));
-    });
-  } catch (_) {
-    return false;
-  }
-}
 
 function openPinUnlock() {
   pinStep = 'unlock';
@@ -1933,6 +1965,115 @@ document.querySelectorAll("[data-theme-set]").forEach((btn) => {
 window.Telegram?.WebApp?.onEvent?.("themeChanged", () => {
   if ((localStorage.getItem(THEME_KEY) || "system") === "system") applyTheme("system");
 });
+
+
+/* ===== Telegram Biometrics (Face ID / Touch ID) ===== */
+class TelegramBiometrics {
+  constructor() {
+    this.bm = window.Telegram?.WebApp?.BiometricManager;
+  }
+  init() {
+    return new Promise((resolve) => {
+      if (!this.bm) {
+        return resolve({ success: false, error: 'Только в мобильном Telegram', available: false });
+      }
+      if (this.bm.isInited) {
+        return resolve({
+          success: true,
+          available: this.bm.isBiometricAvailable,
+          type: this.bm.biometricType
+        });
+      }
+      this.bm.init(() => {
+        resolve({
+          success: true,
+          available: this.bm.isBiometricAvailable,
+          type: this.bm.biometricType
+        });
+      });
+    });
+  }
+  requestAccess(reason) {
+    return new Promise((resolve) => {
+      if (!this.bm?.isBiometricAvailable) {
+        return resolve({ success: false, error: 'Биометрия недоступна' });
+      }
+      if (this.bm.isAccessGranted) return resolve({ success: true });
+      this.bm.requestAccess({ reason: reason || 'Для входа в Destr VPN' }, (granted) => {
+        resolve({ success: !!granted });
+      });
+    });
+  }
+  authenticate(reason) {
+    return new Promise((resolve) => {
+      if (!this.bm?.isAccessGranted) {
+        return resolve({ success: false, error: 'Нет доступа к биометрии' });
+      }
+      this.bm.authenticate({ reason: reason || 'Подтвердите личность' }, (success, token) => {
+        resolve({ success: !!success, token: token || null });
+      });
+    });
+  }
+}
+const tgBiometrics = new TelegramBiometrics();
+
+async function setupBiometric(enable) {
+  if (!enable) {
+    localStorage.removeItem('destr_faceid');
+    return true;
+  }
+  const initResult = await tgBiometrics.init();
+  if (!initResult.available) {
+    throw new Error(initResult.error || 'Face ID / Touch ID недоступен (нужен iOS/Android Telegram)');
+  }
+  const access = await tgBiometrics.requestAccess('Включить быстрый вход в Destr VPN');
+  if (!access.success) {
+    throw new Error('Доступ к Face ID не выдан');
+  }
+  const auth = await tgBiometrics.authenticate('Подтвердите Face ID');
+  if (!auth.success) {
+    throw new Error('Не удалось подтвердить Face ID');
+  }
+  localStorage.setItem('destr_faceid', '1');
+  if (auth.token && tgBiometrics.bm?.updateBiometricToken) {
+    try {
+      await new Promise((resolve) => {
+        tgBiometrics.bm.updateBiometricToken(auth.token, () => resolve());
+      });
+    } catch (_) {}
+  }
+  return true;
+}
+
+async function tryBiometricUnlock() {
+  if (localStorage.getItem('destr_faceid') !== '1') return false;
+  const initResult = await tgBiometrics.init();
+  if (!initResult.available) return false;
+  if (!tgBiometrics.bm.isAccessGranted) {
+    const access = await tgBiometrics.requestAccess('Вход в Destr VPN');
+    if (!access.success) return false;
+  }
+  const auth = await tgBiometrics.authenticate('Сканируйте лицо для входа');
+  return !!auth.success;
+}
+
+document.getElementById('toggle-faceid')?.addEventListener('change', async (e) => {
+  hapticSelect();
+  const on = e.target.checked;
+  try {
+    await setupBiometric(on);
+    if (on) hapticNotify('success');
+  } catch (err) {
+    e.target.checked = false;
+    localStorage.removeItem('destr_faceid');
+    hapticNotify('error');
+    alert(err.message || 'Face ID недоступен');
+  }
+});
+if (localStorage.getItem('destr_faceid') === '1') {
+  const t = document.getElementById('toggle-faceid');
+  if (t) t.checked = true;
+}
 
 (async function bootstrapSession() {
   applyTheme(localStorage.getItem(THEME_KEY) || 'system');
@@ -2149,7 +2290,7 @@ $('pin-pad')?.addEventListener('click', (e) => {
   resetPin('create');
 });
 
-$('toggle-faceid')?.addEventListener('change', () => hapticSelect());
+/* faceid toggle → full block */
 
 
 /* ===== Admin panel ===== */
@@ -2272,6 +2413,246 @@ document.getElementById('adm-search-btn')?.addEventListener('click', async () =>
   }
 });
 
+
+/* ===== Devices management ===== */
+let renameDeviceId = null;
+
+async function apiAuthPost(path, body) {
+  const token = getSession();
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    },
+    body: JSON.stringify({ ...(body || {}), token })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + r.status));
+  return data;
+}
+
+async function openDevicesList() {
+  const box = document.getElementById('devices-list-box');
+  const sheet = document.getElementById('sheet-devices');
+  if (!box || !sheet) return;
+  box.innerHTML = '<div style="text-align:center;color:var(--tg-theme-hint-color);padding:20px">Загрузка…</div>';
+  sheet.classList.add('open');
+  try {
+    const data = await apiAuthPost('/api/device/list', {});
+    if (!data.devices?.length) {
+      box.innerHTML = '<div style="text-align:center;color:var(--tg-theme-hint-color);padding:20px">Пока нет устройств</div>';
+      return;
+    }
+    box.innerHTML = data.devices.map((d) => `
+      <div class="cell" style="padding:12px 4px" data-device-id="${d.id}">
+        <div class="cell-body" style="min-width:0">
+          <div class="cell-title" data-name>${escapeHtml(d.name)}</div>
+          <div class="cell-subtitle">${d.addedAt ? new Date(d.addedAt).toLocaleString('ru-RU') : ''}</div>
+        </div>
+        <button type="button" class="icon-btn" data-act="rename" aria-label="Изменить" style="width:36px;height:36px;color:var(--tg-theme-link-color)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <button type="button" class="icon-btn" data-act="delete" aria-label="Удалить" style="width:36px;height:36px;color:var(--tg-theme-destructive-text-color)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>
+    `).join('');
+  } catch (e) {
+    box.innerHTML = '<div style="color:var(--tg-theme-destructive-text-color);padding:16px;text-align:center">' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+
+document.getElementById('btn-devices-list')?.addEventListener('click', () => {
+  hapticImpact('light');
+  openDevicesList();
+});
+document.getElementById('btn-close-devices')?.addEventListener('click', () => {
+  document.getElementById('sheet-devices')?.classList.remove('open');
+});
+document.getElementById('sheet-devices')?.addEventListener('click', (e) => {
+  if (e.target.id === 'sheet-devices') e.currentTarget.classList.remove('open');
+});
+
+document.getElementById('devices-list-box')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act]');
+  const row = e.target.closest('[data-device-id]');
+  if (!btn || !row) return;
+  const id = Number(row.dataset.deviceId);
+  const act = btn.dataset.act;
+  if (act === 'rename') {
+    renameDeviceId = id;
+    const name = row.querySelector('[data-name]')?.textContent || '';
+    const input = document.getElementById('rename-input');
+    if (input) input.value = name;
+    document.getElementById('sheet-rename')?.classList.add('open');
+    return;
+  }
+  if (act === 'delete') {
+    if (!confirm('Удалить это устройство из списка?')) return;
+    try {
+      const data = await apiAuthPost('/api/device/delete', { id });
+      hapticNotify('success');
+      const dc = document.getElementById('device-count');
+      if (dc && data.deviceCount != null) {
+        const parts = (dc.textContent || '').split('/');
+        const limit = parts[1] ? parts[1].trim() : '';
+        dc.textContent = data.deviceCount + (limit ? ' / ' + limit : '');
+      }
+      openDevicesList();
+      loadCabinet();
+    } catch (err) {
+      hapticNotify('error');
+      alert(err.message);
+    }
+  }
+});
+
+document.getElementById('btn-rename-save')?.addEventListener('click', async () => {
+  const name = document.getElementById('rename-input')?.value?.trim();
+  if (!name || !renameDeviceId) return;
+  try {
+    await apiAuthPost('/api/device/update', { id: renameDeviceId, name });
+    hapticNotify('success');
+    document.getElementById('sheet-rename')?.classList.remove('open');
+    openDevicesList();
+  } catch (err) {
+    hapticNotify('error');
+    alert(err.message);
+  }
+});
+document.getElementById('btn-rename-cancel')?.addEventListener('click', () => {
+  document.getElementById('sheet-rename')?.classList.remove('open');
+});
+document.getElementById('sheet-rename')?.addEventListener('click', (e) => {
+  if (e.target.id === 'sheet-rename') e.currentTarget.classList.remove('open');
+});
+
+/* Happ open — real subscription URL */
+function openInHapp(subUrl) {
+  if (!subUrl) {
+    alert('Сначала нажмите «Добавить устройство»');
+    return;
+  }
+  try { navigator.clipboard.writeText(subUrl); } catch (_) {}
+  const tg = window.Telegram?.WebApp;
+  // Mini App blocks most custom schemes (happ://). Prefer openLink on https, else copy + hint.
+  if (tg?.openLink && /^https?:\/\//i.test(subUrl)) {
+    try {
+      tg.openLink(subUrl, { try_instant_view: false });
+      return;
+    } catch (_) {}
+  }
+  // Try happ:// anyway (may be blocked inside Mini App)
+  try {
+    const a = document.createElement('a');
+    a.href = 'happ://add/' + encodeURIComponent(subUrl);
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (_) {}
+  // Always show fallback: user can paste in Happ
+  if (tg?.showPopup) {
+    tg.showPopup({
+      title: 'Подписка скопирована',
+      message: 'Из Mini App нельзя надёжно открыть Happ. Ссылка в буфере — вставьте её в Happ → Импорт.',
+      buttons: [{ type: 'ok' }]
+    });
+  } else {
+    alert('Ссылка скопирована. Вставьте её в Happ (из Mini App прямой переход часто блокируется).');
+  }
+}
+
+/* Fix add device sheet buttons */
+(function rebindAddDevice() {
+  const addBtn = document.getElementById('btn-add-device');
+  if (!addBtn) return;
+  // clone to drop old listeners
+  const neo = addBtn.cloneNode(true);
+  addBtn.parentNode.replaceChild(neo, addBtn);
+  neo.addEventListener('click', async () => {
+    hapticImpact('medium');
+    try {
+      const data = await apiAuthPost('/api/device/add', {});
+      const dc = document.getElementById('device-count');
+      if (dc) dc.textContent = data.deviceCount + ' / ' + data.deviceLimit;
+      window.__lastSubUrl = data.subscriptionUrl;
+      try { await navigator.clipboard.writeText(data.subscriptionUrl); } catch (_) {}
+      document.getElementById('sheet-device')?.classList.add('open');
+      loadCabinet();
+    } catch (err) {
+      hapticNotify('error');
+      alert(err.message || 'Не удалось добавить устройство');
+    }
+  });
+})();
+
+(function rebindHapp() {
+  const happ = document.getElementById('btn-open-happ');
+  if (!happ) return;
+  const neo = happ.cloneNode(true);
+  happ.parentNode.replaceChild(neo, happ);
+  neo.addEventListener('click', () => {
+    openInHapp(window.__lastSubUrl);
+    document.getElementById('sheet-device')?.classList.remove('open');
+  });
+})();
+
+document.getElementById('btn-close-sheet')?.addEventListener('click', () => {
+  document.getElementById('sheet-device')?.classList.remove('open');
+});
+
+/* Phone in settings */
+document.getElementById('btn-set-phone')?.addEventListener('click', () => {
+  hapticImpact('light');
+  const input = document.getElementById('settings-phone-input');
+  const status = document.getElementById('phone-status')?.textContent || '';
+  if (input && status && status !== 'не указан') {
+    input.value = status;
+  }
+  document.getElementById('sheet-phone')?.classList.add('open');
+});
+document.getElementById('btn-phone-cancel')?.addEventListener('click', () => {
+  document.getElementById('sheet-phone')?.classList.remove('open');
+});
+document.getElementById('sheet-phone')?.addEventListener('click', (e) => {
+  if (e.target.id === 'sheet-phone') e.currentTarget.classList.remove('open');
+});
+document.getElementById('btn-phone-save')?.addEventListener('click', async () => {
+  const btn = document.getElementById('btn-phone-save');
+  const phone = document.getElementById('settings-phone-input')?.value || '';
+  const msg = document.getElementById('phone-save-msg');
+  btn?.classList.add('loading');
+  if (msg) { msg.textContent = ''; msg.classList.remove('visible'); }
+  try {
+    const data = await apiAuthPost('/api/account/phone', { phone });
+    hapticNotify('success');
+    const st = document.getElementById('phone-status');
+    if (st) st.textContent = data.phone;
+    document.getElementById('sheet-phone')?.classList.remove('open');
+  } catch (e) {
+    hapticNotify('error');
+    if (msg) {
+      msg.textContent = e.message;
+      msg.classList.add('visible');
+      msg.style.display = 'block';
+    }
+  } finally {
+    btn?.classList.remove('loading');
+  }
+});
+
+/* Show phone from /api/me */
+const _loadCabinet = typeof loadCabinet === 'function' ? loadCabinet : null;
+
 </script>
+
 </body>
 </html>
