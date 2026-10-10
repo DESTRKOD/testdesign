@@ -1,19 +1,13 @@
-import { migrate, getDb } from '../lib/db.js';
+import { migrate } from '../lib/db.js';
 import { getSessionUser } from '../lib/auth.js';
-import { getClientTraffic, getPanels } from '../lib/xui.js';
+import { getTrafficForEmail } from '../lib/traffic.js';
+import { getDb } from '../lib/db.js';
 
 function getToken(req) {
   const auth = req.headers.authorization || '';
   if (auth.startsWith('Bearer ')) return auth.slice(7);
   const body = typeof req.body === 'string' ? {} : req.body || {};
   return body.token || req.query?.token || '';
-}
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((resolve) => setTimeout(() => resolve({ up: 0, down: 0, total: 0 }), ms))
-  ]);
 }
 
 export default async function handler(req, res) {
@@ -35,7 +29,8 @@ export default async function handler(req, res) {
     });
     const subscription = subR.rows[0] || null;
     let deviceCount = 0;
-    let usedBytes = 0;
+    let up = 0;
+    let down = 0;
 
     if (subscription) {
       const d = await db.execute({
@@ -44,24 +39,15 @@ export default async function handler(req, res) {
       });
       deviceCount = Number(d.rows[0]?.c || 0);
 
-      // traffic optional — parallel, max 2.5s total so UI stays fast
       try {
-        const panels = Object.values(getPanels()).filter((p) => p?.url);
-        const parts = await Promise.all(
-          panels.map((panel) =>
-            withTimeout(
-              getClientTraffic(panel, subscription.xui_email).catch(() => ({
-                total: 0
-              })),
-              2500
-            )
-          )
-        );
-        usedBytes = parts.reduce((s, t) => s + (t.total || 0), 0);
+        const t = await getTrafficForEmail(subscription.xui_email);
+        up = t.up;
+        down = t.down;
       } catch (_) {}
     }
 
-    const usedGb = usedBytes / (1024 * 1024 * 1024);
+    const usedBytes = up + down;
+    const usedGb = Math.round((usedBytes / (1024 * 1024 * 1024)) * 100) / 100;
     const totalGb = subscription ? Number(subscription.total_gb || 0) : 0;
 
     res.setHeader('Cache-Control', 'no-store');
@@ -81,8 +67,10 @@ export default async function handler(req, res) {
             id: subscription.id,
             displayName: subscription.display_name,
             totalGb,
-            usedGb: Math.round(usedGb * 100) / 100,
+            usedGb,
             usedBytes,
+            uploadBytes: up,
+            downloadBytes: down,
             expiryAt: subscription.expiry_at,
             deviceLimit: subscription.device_limit,
             deviceCount,

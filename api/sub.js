@@ -5,6 +5,13 @@ import {
 } from '../lib/xui.js';
 
 import { readToken } from '../lib/token.js';
+import { migrate } from '../lib/db.js';
+import {
+  getTrafficForEmail,
+  getSubscriptionByEmail,
+  buildUserinfoHeader,
+  profileTitleHeader
+} from '../lib/traffic.js';
 
 function parseMaybeJson(value) {
   if (value == null) return {};
@@ -276,14 +283,51 @@ export default async function handler(req, res) {
       );
     }
 
-    const body =
-      '#profile-title: Destr Connect\n' + output.join('\n');
+    // --- Same traffic source as Mini App (/api/me) ---
+    let up = 0;
+    let down = 0;
+    let totalGb = 0;
+    let expiryAt = null;
+    let displayName = 'Destr Connect';
+    try {
+      await migrate();
+      const sub = await getSubscriptionByEmail(email);
+      if (sub) {
+        totalGb = Number(sub.total_gb || 0);
+        expiryAt = sub.expiry_at || null;
+        displayName = sub.display_name || displayName;
+      }
+      const tr = await getTrafficForEmail(email);
+      up = tr.up;
+      down = tr.down;
+    } catch (e) {
+      console.warn('sub traffic', e.message);
+    }
+
+    const userinfo = buildUserinfoHeader({
+      up,
+      down,
+      totalGb,
+      expiryAt
+    });
+    const titleHdr = profileTitleHeader(displayName);
+
+    const body = '#profile-title: ' + displayName + '\n' + output.join('\n');
 
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('profile-title', 'Destr Connect');
-    res.setHeader('Profile-Title', 'Destr Connect');
+    res.setHeader('profile-title', titleHdr);
+    res.setHeader('Profile-Title', titleHdr);
+    res.setHeader('subscription-userinfo', userinfo);
+    res.setHeader('Subscription-Userinfo', userinfo);
+    res.setHeader('profile-update-interval', '12');
+    res.setHeader('Profile-Update-Interval', '12');
+    // CORS-ish exposure for some clients
+    res.setHeader(
+      'Access-Control-Expose-Headers',
+      'Subscription-Userinfo, Profile-Title, Profile-Update-Interval'
+    );
     res.end(body);
 
     if (errors.length) {
