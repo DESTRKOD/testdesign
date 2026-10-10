@@ -859,6 +859,55 @@
       color: var(--tg-theme-text-color);
     }
 
+  
+    html[data-theme="light"] {
+      --tg-theme-bg-color: #ffffff;
+      --tg-theme-secondary-bg-color: #f2f2f7;
+      --tg-theme-text-color: #000000;
+      --tg-theme-hint-color: #8e8e93;
+      --tg-theme-button-color: #3390ec;
+      --tg-theme-button-text-color: #ffffff;
+      --tg-theme-section-bg-color: #ffffff;
+      --tg-theme-section-header-text-color: #6d6d72;
+      --tg-theme-section-separator-color: rgba(60,60,67,0.29);
+      --tg-theme-link-color: #3390ec;
+      --tg-theme-destructive-text-color: #ff3b30;
+    }
+    html[data-theme="dark"] {
+      --tg-theme-bg-color: #000000;
+      --tg-theme-secondary-bg-color: #1c1c1e;
+      --tg-theme-text-color: #ffffff;
+      --tg-theme-hint-color: #8e8e93;
+      --tg-theme-button-color: #3390ec;
+      --tg-theme-button-text-color: #ffffff;
+      --tg-theme-section-bg-color: #1c1c1e;
+      --tg-theme-section-header-text-color: #8e8e93;
+      --tg-theme-section-separator-color: rgba(84,84,88,0.65);
+      --tg-theme-link-color: #64b5ef;
+      --tg-theme-destructive-text-color: #ff453a;
+    }
+    html[data-theme="dark"] .pin-close {
+      background: rgba(255,255,255,0.12);
+    }
+    html[data-theme="dark"] .pin-kb:active {
+      background: rgba(255,255,255,0.08);
+    }
+    html[data-theme="dark"] .pin-box {
+      border-color: rgba(255,255,255,0.18);
+    }
+    .home-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 28px;
+      color: var(--tg-theme-hint-color);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
   </style>
 </head>
 <body>
@@ -904,7 +953,7 @@
     </div>
     <div class="header">
       <h1>Введите код</h1>
-      <p id="code-subtitle">Мы отправили SMS с кодом подтверждения на номер <b id="sent-phone"></b></p>
+      <p id="code-subtitle">Код отправлен в Telegram-бот. Номер <b id="sent-phone"></b></p>
     </div>
     <div class="code-inputs" id="code-inputs">
       <input type="tel" class="code-digit" maxlength="1" inputmode="numeric" data-index="0">
@@ -962,22 +1011,26 @@
         </svg>
       </button>
     </div>
+    <div id="home-empty" class="home-empty">
+      Ваша подписка пока не появилась.<br>Ожидайте
+    </div>
+    <div id="home-sub" class="hidden" style="display:none;flex-direction:column;flex:1">
     <div class="card">
       <p class="card-title">На имя</p>
-      <h2 class="card-name" id="sub-name">Иван Петров</h2>
+      <h2 class="card-name" id="sub-name"></h2>
       <div class="card-stats">
         <div class="stat">
           <div class="stat-label">Трафик</div>
-          <div class="stat-value" id="sub-traffic">42 / 100 ГБ</div>
+          <div class="stat-value" id="sub-traffic">—</div>
         </div>
         <div class="stat">
           <div class="stat-label">Срок</div>
-          <div class="stat-value" id="sub-expiry">до 15.12.2026</div>
+          <div class="stat-value" id="sub-expiry">—</div>
         </div>
       </div>
       <div class="progress">
-        <div class="progress-track"><div class="progress-fill" id="sub-progress" style="width:42%"></div></div>
-        <div class="progress-meta"><span>Использовано 42%</span><span>осталось 58 ГБ</span></div>
+        <div class="progress-track"><div class="progress-fill" id="sub-progress" style="width:0%"></div></div>
+        <div class="progress-meta"><span id="sub-used-label"></span><span id="sub-left-label"></span></div>
       </div>
     </div>
     <div class="section">
@@ -991,7 +1044,7 @@
             <div class="cell-title">Добавлено устройств</div>
             <div class="cell-subtitle">лимит по тарифу</div>
           </div>
-          <div class="cell-value" id="device-count">1 / 3</div>
+          <div class="cell-value" id="device-count">0 / 0</div>
         </div>
       </div>
     </div>
@@ -1000,6 +1053,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
         <span class="btn-text">Добавить устройство</span>
       </button>
+    </div>
     </div>
   </div>
 
@@ -1044,8 +1098,8 @@
           <svg class="cell-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
         </button>
         <div class="cell">
-          <div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 015 5v1"/><rect x="5" y="9" width="14" height="11" rx="2"/><circle cx="12" cy="14.5" r="1.5"/></svg></div>
-          <div class="cell-body"><div class="cell-title">Face ID</div><div class="cell-subtitle">разблокировка приложения</div></div>
+          <div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 012-2h2M20 8V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M9 15c.8 1.2 1.8 1.8 3 1.8s2.2-.6 3-1.8"/></svg></div>
+              <div class="cell-body"><div class="cell-title">Face ID</div><div class="cell-subtitle">разблокировка приложения</div></div>
           <label class="switch"><input type="checkbox" id="toggle-faceid" /><span class="switch-track"><span class="switch-thumb"></span></span></label>
         </div>
       </div>
@@ -1739,38 +1793,47 @@ async function loadCabinet() {
   try {
     const data = await API.me(token);
     const sub = data.subscription;
-    if (sub) {
-      const nameEl = $("sub-name");
-      if (nameEl) nameEl.textContent = sub.displayName || 'Подписка';
-      const tr = $("sub-traffic");
-      if (tr) {
-        const used = sub.usedGb != null ? sub.usedGb : null;
-        if (sub.totalGb === 0) {
-          tr.textContent = used != null ? (used + ' ГБ / ∞') : 'Безлимит';
-        } else {
-          tr.textContent = (used != null ? used + ' / ' : '') + sub.totalGb + ' ГБ';
-        }
-      }
-      const ex = $("sub-expiry");
-      if (ex) {
-        ex.textContent = sub.expiryAt
-          ? ('до ' + new Date(sub.expiryAt).toLocaleDateString('ru-RU'))
-          : 'Бессрочно';
-      }
-      const dc = $("device-count");
-      if (dc) dc.textContent = (sub.deviceCount || 0) + ' / ' + (sub.deviceLimit || 3);
-      const fill = $("sub-progress");
-      if (fill && sub.totalGb > 0 && sub.usedGb != null) {
-        const pct = Math.min(100, Math.round((sub.usedGb / sub.totalGb) * 100));
-        fill.style.width = pct + '%';
-      }
+    const empty = $("home-empty");
+    const block = $("home-sub");
+    if (!sub) {
+      if (empty) empty.style.display = "flex";
+      if (block) { block.style.display = "none"; block.classList.add("hidden"); }
+      return true;
+    }
+    if (empty) empty.style.display = "none";
+    if (block) { block.style.display = "flex"; block.classList.remove("hidden"); }
+    const nameEl = $("sub-name");
+    if (nameEl) nameEl.textContent = sub.displayName || "";
+    const tr = $("sub-traffic");
+    const used = sub.usedGb != null ? sub.usedGb : 0;
+    if (tr) {
+      if (sub.totalGb === 0) tr.textContent = used + " ГБ / ∞";
+      else tr.textContent = used + " / " + sub.totalGb + " ГБ";
+    }
+    const ex = $("sub-expiry");
+    if (ex) {
+      ex.textContent = sub.expiryAt
+        ? ("до " + new Date(sub.expiryAt).toLocaleDateString("ru-RU"))
+        : "Бессрочно";
+    }
+    const dc = $("device-count");
+    if (dc) dc.textContent = (sub.deviceCount || 0) + " / " + (sub.deviceLimit || 0);
+    const fill = $("sub-progress");
+    const usedLabel = $("sub-used-label");
+    const leftLabel = $("sub-left-label");
+    if (sub.totalGb > 0) {
+      const pct = Math.min(100, Math.round((used / sub.totalGb) * 100));
+      if (fill) fill.style.width = pct + "%";
+      if (usedLabel) usedLabel.textContent = "Использовано " + pct + "%";
+      if (leftLabel) leftLabel.textContent = "осталось " + Math.max(0, Math.round((sub.totalGb - used) * 100) / 100) + " ГБ";
     } else {
-      const nameEl = $("sub-name");
-      if (nameEl) nameEl.textContent = 'Нет подписки';
+      if (fill) fill.style.width = "0%";
+      if (usedLabel) usedLabel.textContent = "Безлимит";
+      if (leftLabel) leftLabel.textContent = "";
     }
     return true;
   } catch (e) {
-    console.warn('me failed', e);
+    console.warn("me failed", e);
     clearSession();
     return false;
   }
@@ -1855,19 +1918,34 @@ sheetDevice.addEventListener("click", (e) => { if (e.target === sheetDevice) she
 
 /* Theme */
 const THEME_KEY = "destr_theme";
-function applyThemeCheck(pref) {
+function resolveTheme(pref) {
+  if (pref === "light" || pref === "dark") return pref;
+  const tg = window.Telegram?.WebApp;
+  if (tg?.colorScheme === "dark" || tg?.colorScheme === "light") return tg.colorScheme;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function applyTheme(pref) {
+  const resolved = resolveTheme(pref);
+  document.documentElement.setAttribute("data-theme", resolved);
+  localStorage.setItem(THEME_KEY, pref);
   document.querySelectorAll(".theme-check").forEach((el) => {
     el.classList.toggle("hidden", el.dataset.check !== pref);
   });
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (tg?.setBackgroundColor) tg.setBackgroundColor(resolved === "dark" ? "#000000" : "#ffffff");
+    if (tg?.setHeaderColor) tg.setHeaderColor(resolved === "dark" ? "#1c1c1e" : "#ffffff");
+  } catch (_) {}
 }
-applyThemeCheck(localStorage.getItem(THEME_KEY) || "system");
+applyTheme(localStorage.getItem(THEME_KEY) || "system");
 document.querySelectorAll("[data-theme-set]").forEach((btn) => {
   btn.addEventListener("click", () => {
-    const pref = btn.dataset.themeSet;
-    localStorage.setItem(THEME_KEY, pref);
-    applyThemeCheck(pref);
+    applyTheme(btn.dataset.themeSet);
     hapticSelect();
   });
+});
+window.Telegram?.WebApp?.onEvent?.("themeChanged", () => {
+  if ((localStorage.getItem(THEME_KEY) || "system") === "system") applyTheme("system");
 });
 
 

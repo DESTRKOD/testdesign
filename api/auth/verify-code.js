@@ -5,7 +5,7 @@ import {
   findOrCreateUserByPhone,
   createSession
 } from '../../lib/auth.js';
-import { toE164, checkVerificationStatus } from '../../lib/gateway.js';
+import { toE164 } from '../../lib/gateway.js';
 
 const CODE_MAX_ATTEMPTS = 5;
 
@@ -54,48 +54,8 @@ export default async function handler(req, res) {
       });
     }
 
-    let valid = false;
-
-    if (row.channel === 'gateway' && row.gateway_request_id) {
-      try {
-        const status = await checkVerificationStatus(
-          row.gateway_request_id,
-          code
-        );
-        const st =
-          status?.verification_status?.status ||
-          status?.status ||
-          '';
-        valid = st === 'code_valid';
-
-        if (st === 'code_max_attempts_exceeded' || st === 'expired') {
-          await db.execute({
-            sql: 'DELETE FROM auth_codes WHERE phone = ?',
-            args: [phone]
-          });
-          return res.status(400).json({
-            ok: false,
-            error:
-              st === 'expired'
-                ? 'Код истёк. Запросите новый.'
-                : 'Превышено число попыток. Запросите новый код.'
-          });
-        }
-      } catch (e) {
-        console.error('checkVerificationStatus', e.message);
-        await db.execute({
-          sql: 'UPDATE auth_codes SET attempts = attempts + 1 WHERE id = ?',
-          args: [row.id]
-        });
-        return res.status(400).json({
-          ok: false,
-          error: 'Неверный код подтверждения'
-        });
-      }
-    } else {
-      const expected = row.code_hash || row.code;
-      valid = expected && timingSafeEqualStr(expected, hashSecret(code));
-    }
+    const expected = row.code_hash || row.code;
+    const valid = expected && timingSafeEqualStr(String(expected), hashSecret(code));
 
     if (!valid) {
       await db.execute({
