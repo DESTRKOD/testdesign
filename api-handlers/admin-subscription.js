@@ -290,6 +290,57 @@ export default async function handler(req, res) {
       });
     }
 
+
+    /* ---------- DELETE subscription ---------- */
+    if (action === 'delete') {
+      const subId = Number(body.subscriptionId || body.id);
+      const userId = Number(body.userId || body.user_id);
+      let row;
+      if (subId) {
+        row = (
+          await db.execute({
+            sql: 'SELECT * FROM subscriptions WHERE id = ?',
+            args: [subId]
+          })
+        ).rows[0];
+      } else if (userId) {
+        row = (
+          await db.execute({
+            sql: 'SELECT * FROM subscriptions WHERE user_id = ? ORDER BY id DESC LIMIT 1',
+            args: [userId]
+          })
+        ).rows[0];
+      }
+      if (!row) {
+        return res.status(404).json({ ok: false, error: 'Subscription not found' });
+      }
+
+      // disable + try remove limits on panels
+      const panels = getPanels();
+      const panelResults = [];
+      for (const [name, panel] of Object.entries(panels)) {
+        if (!panel?.url) continue;
+        try {
+          await setClientEnable(panel, row.xui_email, false);
+          panelResults.push({ name, ok: true });
+        } catch (e) {
+          panelResults.push({ name, ok: false, error: e.message });
+        }
+      }
+
+      await db.execute({
+        sql: 'DELETE FROM devices WHERE subscription_id = ?',
+        args: [row.id]
+      });
+      await db.execute({
+        sql: 'DELETE FROM subscriptions WHERE id = ?',
+        args: [row.id]
+      });
+
+      return res.status(200).json({ ok: true, deleted: true, panelResults });
+    }
+
+
     return res.status(400).json({ ok: false, error: 'Unknown action' });
   } catch (e) {
     console.error('admin subscription', e);

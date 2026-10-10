@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>DxS Connect</title>
-  <meta name="destr-build" content="2026-10-10-v6">
+  <meta name="destr-build" content="2026-10-10-v7">
   <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
   <style>
@@ -772,20 +772,19 @@
       padding: calc(48px + env(safe-area-inset-top, 0px)) 24px calc(16px + env(safe-area-inset-bottom, 0px));
     }
     .pin-logo {
-      width: 76px;
-      height: 76px;
-      border-radius: 22px;
-      background: linear-gradient(160deg, #5eb0f7 0%, #3390ec 100%);
+      width: 160px;
+      height: 160px;
+      margin: 0 auto 20px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 28px;
-      overflow: hidden;
-      box-shadow: 0 8px 24px rgba(51, 144, 236, 0.28);
+      background: transparent;
+      border-radius: 0;
+      overflow: visible;
     }
     .pin-logo .lottie-anim {
-      width: 56px;
-      height: 56px;
+      width: 160px;
+      height: 160px;
     }
     .pin-boxes {
       display: flex;
@@ -1214,6 +1213,14 @@
             <div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div>
             <div class="cell-body"><div class="cell-title">Разблокировать</div></div>
           </button>
+          <button type="button" class="cell" id="adm-edit">
+            <div class="cell-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+            <div class="cell-body"><div class="cell-title">Сохранить изменения (поля выше)</div></div>
+          </button>
+          <button type="button" class="cell" id="adm-delete">
+            <div class="cell-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></div>
+            <div class="cell-body"><div class="cell-title">Удалить подписку</div></div>
+          </button>
         </div>
       </div>
       <div class="section">
@@ -1255,6 +1262,7 @@
       <div class="sheet-handle"></div>
       <h3 class="sheet-title">Устройства</h3>
       <div id="devices-list-box" style="overflow-y:auto;flex:1;margin-bottom:12px;-webkit-overflow-scrolling:touch"></div>
+      <button type="button" class="btn" id="btn-devices-happ" style="margin-bottom:10px"><span class="btn-text">Добавить в Happ</span></button>
       <button type="button" class="btn secondary" id="btn-close-devices"><span class="btn-text">Закрыть</span></button>
     </div>
   </div>
@@ -1284,7 +1292,7 @@
   </div>
 
 <script>
-window.__DESTR_BUILD = "2026-10-10-v6";
+window.__DESTR_BUILD = "2026-10-10-v7";
 console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
@@ -1642,6 +1650,21 @@ btnContinue.addEventListener("click", async () => {
   }
 });
 
+
+/* Enter key: phone → continue, code → verify */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const active = document.querySelector('.screen.active');
+  if (!active) return;
+  if (active.id === 'screen-phone') {
+    e.preventDefault();
+    $("btn-continue")?.click();
+  } else if (active.id === 'screen-code') {
+    e.preventDefault();
+    $("btn-verify")?.click();
+  }
+});
+
 $("btn-tg-login").addEventListener("click", async () => {
   hapticImpact("medium");
   const tg = window.Telegram?.WebApp;
@@ -1652,6 +1675,9 @@ $("btn-tg-login").addEventListener("click", async () => {
     phoneError.classList.add('visible');
     return;
   }
+  const btn = $("btn-tg-login");
+  btn?.classList.add('loading');
+  btn.disabled = true;
   try {
     const data = await API.post('/api/auth/telegram', {
       initData,
@@ -1664,12 +1690,16 @@ $("btn-tg-login").addEventListener("click", async () => {
       switchScreen($("screen-phone"), $("screen-2fa"), 'forward');
     } else {
       await loadCabinet();
+      markPinUnlocked();
       switchScreen($("screen-phone"), $("screen-menu"), 'forward');
     }
   } catch (err) {
     hapticNotify('error');
     phoneError.textContent = err.message || 'Ошибка входа через Telegram';
     phoneError.classList.add('visible');
+  } finally {
+    btn?.classList.remove('loading');
+    btn.disabled = false;
   }
 });
 
@@ -1909,12 +1939,29 @@ function pinIsEnabled() {
 function faceIdEnabled() {
   try { return localStorage.getItem('destr_faceid') === '1'; } catch (_) { return false; }
 }
+function pinSalt() {
+  let s = localStorage.getItem('destr_pin_salt');
+  if (!s) {
+    s = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('destr_pin_salt', s);
+  }
+  return s;
+}
 function hashPin(pin) {
-  // lightweight client hash (not for server secrets)
+  // stable hash (NOT tied to session token — that broke unlock)
   let h = 0;
-  const s = String(pin) + '|' + (localStorage.getItem(SESSION_KEY) || '');
+  const s = String(pin) + '|' + pinSalt();
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i) | 0;
   return 'p' + Math.abs(h).toString(16) + '_' + s.length;
+}
+function markPinUnlocked() {
+  try { sessionStorage.setItem('destr_pin_unlocked', '1'); } catch (_) {}
+}
+function isPinUnlockedThisSession() {
+  try { return sessionStorage.getItem('destr_pin_unlocked') === '1'; } catch (_) { return false; }
+}
+function clearPinUnlockFlag() {
+  try { sessionStorage.removeItem('destr_pin_unlocked'); } catch (_) {}
 }
 
 
@@ -1947,14 +1994,31 @@ function resolveTheme(pref) {
 function applyTheme(pref) {
   const resolved = resolveTheme(pref);
   document.documentElement.setAttribute("data-theme", resolved);
+  document.documentElement.style.colorScheme = resolved;
   localStorage.setItem(THEME_KEY, pref);
+  const bg = resolved === "dark" ? "#000000" : "#ffffff";
+  const sec = resolved === "dark" ? "#1c1c1e" : "#f2f2f7";
+  const text = resolved === "dark" ? "#ffffff" : "#000000";
+  const hint = "#8e8e93";
+  // Force CSS variables on :root so UI actually flips (not only TG chrome)
+  const root = document.documentElement;
+  root.style.setProperty("--tg-theme-bg-color", bg);
+  root.style.setProperty("--tg-theme-secondary-bg-color", sec);
+  root.style.setProperty("--tg-theme-text-color", text);
+  root.style.setProperty("--tg-theme-hint-color", hint);
+  root.style.setProperty("--tg-theme-section-bg-color", resolved === "dark" ? "#1c1c1e" : "#ffffff");
+  root.style.setProperty("--tg-theme-section-separator-color", resolved === "dark" ? "rgba(84,84,88,0.65)" : "rgba(60,60,67,0.29)");
+  root.style.setProperty("--tg-theme-section-header-text-color", resolved === "dark" ? "#8e8e93" : "#6d6d72");
+  document.body.style.background = bg;
+  document.body.style.color = text;
   document.querySelectorAll(".theme-check").forEach((el) => {
     el.classList.toggle("hidden", el.dataset.check !== pref);
   });
   try {
     const tg = window.Telegram?.WebApp;
-    if (tg?.setBackgroundColor) tg.setBackgroundColor(resolved === "dark" ? "#000000" : "#ffffff");
+    if (tg?.setBackgroundColor) tg.setBackgroundColor(bg);
     if (tg?.setHeaderColor) tg.setHeaderColor(resolved === "dark" ? "#1c1c1e" : "#ffffff");
+    if (tg?.setBottomBarColor) tg.setBottomBarColor(bg);
   } catch (_) {}
 }
 applyTheme(localStorage.getItem(THEME_KEY) || "system");
@@ -2019,7 +2083,7 @@ class TelegramBiometrics {
 }
 const tgBiometrics = new TelegramBiometrics();
 
-const SVG_FACE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 012-2h2M20 8V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M9 15c.8 1.2 1.8 1.8 3 1.8s2.2-.6 3-1.8"/></svg>`;
+const SVG_FACE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 012-2h2M20 8V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="9" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10.5" r="1" fill="currentColor" stroke="none"/><path d="M9 16c.9 1.15 1.9 1.7 3 1.7s2.1-.55 3-1.7"/></svg>`;
 const SVG_TOUCH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c-3.3 0-6 2.5-6 5.8v2.2"/><path d="M18 11.2V9c0-3.3-2.7-5.8-6-5.8"/><path d="M8.2 14.5c0 2.4 1.7 4.3 3.8 4.3s3.8-1.9 3.8-4.3v-1.5"/><path d="M12 8.5v6.2"/><path d="M9.5 9.8c.4-.9 1.4-1.5 2.5-1.5 1.2 0 2.2.6 2.6 1.5"/><path d="M7 12.2c0-2.8 2.2-5 5-5s5 2.2 5 5"/><path d="M12 18.8c-1.5 0-2.8-.8-3.5-2"/></svg>`;
 
 async function refreshBiometricUI() {
@@ -2151,7 +2215,7 @@ if (localStorage.getItem('destr_faceid') === '1') {
     }
   }
 
-  if (pinIsEnabled()) {
+  if (pinIsEnabled() && !isPinUnlockedThisSession()) {
     openPinUnlock();
     return;
   }
@@ -2285,6 +2349,8 @@ $('pin-pad')?.addEventListener('click', (e) => {
     const stored = localStorage.getItem('destr_pin_hash');
     if (stored && hashPin(pinBuffer) === stored) {
       hapticNotify('success');
+      markPinUnlocked();
+      pinBuffer = '';
       showOnlyScreen('screen-menu');
       resetPin('create');
     } else {
@@ -2315,6 +2381,7 @@ $('pin-pad')?.addEventListener('click', (e) => {
     localStorage.setItem('destr_pin_set', '1');
     localStorage.setItem('destr_pin_hash', hashPin(pinBuffer));
   } catch (_) {}
+  markPinUnlocked();
   hapticNotify('success');
   switchScreen($('screen-pin'), $('screen-settings'), 'back');
   resetPin('create');
@@ -2325,9 +2392,82 @@ $('pin-pad')?.addEventListener('click', (e) => {
 
 /* ===== Admin panel ===== */
 window.__adminKey = window.__adminKey || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('destr_admin_key') : '') || '';
+
+/* Admin: load all users on open + manage */
+async function adminLoadUsers(q) {
+  const box = document.getElementById('adm-user-list');
+  if (!box) return;
+  box.innerHTML = '<div style="padding:8px 0;color:var(--tg-theme-hint-color)">Загрузка…</div>';
+  try {
+    const data = await adminFetch('/api/admin/users', { q: q || '' });
+    if (!data.users?.length) {
+      box.innerHTML = '<div style="padding:8px 0">Пока нет пользователей</div>';
+      return;
+    }
+    box.innerHTML = data.users.map((u) =>
+      '<div class="adm-user-row" style="padding:12px 0;border-bottom:0.5px solid var(--tg-theme-section-separator-color);cursor:pointer" data-uid="' + u.id + '">' +
+      '<div style="color:var(--tg-theme-text-color);font-weight:600">#' + u.id + (u.name ? ' · ' + u.name : '') + '</div>' +
+      '<div style="font-size:13px;margin-top:2px;color:var(--tg-theme-hint-color)">' + (u.phone || 'без телефона') +
+      (u.tg_id ? ' · tg ' + u.tg_id : '') +
+      (u.sub_status ? ' · подписка: ' + u.sub_status : ' · нет подписки') + '</div></div>'
+    ).join('');
+    box.querySelectorAll('[data-uid]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.uid;
+        const input = document.getElementById('adm-user-id');
+        if (input) input.value = id;
+        document.getElementById('adm-detail')?.classList.add('open');
+        const t = document.getElementById('adm-detail-title');
+        if (t) t.textContent = 'Пользователь #' + id;
+        hapticSelect();
+      });
+    });
+  } catch (e) {
+    box.innerHTML = '<div style="color:var(--tg-theme-destructive-text-color)">' + (e.message || 'Ошибка') + '</div>';
+  }
+}
+
 window.__initAdmin = function (key) {
   window.__adminKey = key || sessionStorage.getItem('destr_admin_key') || '';
+  adminLoadUsers('');
 };
+
+document.getElementById('adm-delete')?.addEventListener('click', async () => {
+  const userId = Number(document.getElementById('adm-user-id')?.value);
+  if (!userId) { admMsg('Укажите ID', true); return; }
+  if (!confirm('Удалить подписку пользователя #' + userId + '?')) return;
+  try {
+    await adminFetch('/api/admin/subscription', { action: 'delete', userId });
+    hapticNotify('success');
+    admMsg('Подписка удалена', false);
+    adminLoadUsers(document.getElementById('adm-search')?.value || '');
+  } catch (e) {
+    hapticNotify('error');
+    admMsg(e.message, true);
+  }
+});
+
+document.getElementById('adm-edit')?.addEventListener('click', async () => {
+  const userId = Number(document.getElementById('adm-user-id')?.value);
+  if (!userId) { admMsg('Укажите ID', true); return; }
+  try {
+    await adminFetch('/api/admin/subscription', {
+      action: 'edit',
+      userId,
+      name: document.getElementById('adm-name')?.value || undefined,
+      totalGb: Number(document.getElementById('adm-gb')?.value || 0),
+      days: Number(document.getElementById('adm-days')?.value || 0),
+      deviceLimit: Number(document.getElementById('adm-devices')?.value || 3)
+    });
+    hapticNotify('success');
+    admMsg('Сохранено', false);
+    adminLoadUsers('');
+  } catch (e) {
+    hapticNotify('error');
+    admMsg(e.message, true);
+  }
+});
+
 
 async function adminFetch(path, body) {
   const key = window.__adminKey || sessionStorage.getItem('destr_admin_key') || '';
@@ -2508,6 +2648,22 @@ document.getElementById('btn-devices-list')?.addEventListener('click', () => {
   openDevicesList();
   document.getElementById('sheet-devices')?.classList.add('open');
 });
+
+document.getElementById('btn-devices-happ')?.addEventListener('click', async () => {
+  hapticImpact('medium');
+  try {
+    const me = await API.me(getSession());
+    const token = me.subscription?.subToken;
+    if (!token) throw new Error('Нет подписки');
+    const subUrl = location.origin + '/api/sub?token=' + encodeURIComponent(token);
+    window.__lastSubUrl = subUrl;
+    openInHapp(subUrl);
+  } catch (e) {
+    hapticNotify('error');
+    alert(e.message || 'Не удалось получить ссылку');
+  }
+});
+
 document.getElementById('btn-close-devices')?.addEventListener('click', () => {
   
 });
