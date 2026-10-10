@@ -1903,6 +1903,37 @@ function openPinUnlock() {
 }
 
 /* Restore session — no phone flash; PIN / Face ID gate */
+const THEME_KEY = "destr_theme";
+function resolveTheme(pref) {
+  if (pref === "light" || pref === "dark") return pref;
+  const tg = window.Telegram?.WebApp;
+  if (tg?.colorScheme === "dark" || tg?.colorScheme === "light") return tg.colorScheme;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function applyTheme(pref) {
+  const resolved = resolveTheme(pref);
+  document.documentElement.setAttribute("data-theme", resolved);
+  localStorage.setItem(THEME_KEY, pref);
+  document.querySelectorAll(".theme-check").forEach((el) => {
+    el.classList.toggle("hidden", el.dataset.check !== pref);
+  });
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (tg?.setBackgroundColor) tg.setBackgroundColor(resolved === "dark" ? "#000000" : "#ffffff");
+    if (tg?.setHeaderColor) tg.setHeaderColor(resolved === "dark" ? "#1c1c1e" : "#ffffff");
+  } catch (_) {}
+}
+applyTheme(localStorage.getItem(THEME_KEY) || "system");
+document.querySelectorAll("[data-theme-set]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    applyTheme(btn.dataset.themeSet);
+    hapticSelect();
+  });
+});
+window.Telegram?.WebApp?.onEvent?.("themeChanged", () => {
+  if ((localStorage.getItem(THEME_KEY) || "system") === "system") applyTheme("system");
+});
+
 (async function bootstrapSession() {
   applyTheme(localStorage.getItem(THEME_KEY) || 'system');
 
@@ -2006,36 +2037,7 @@ $("btn-close-sheet").addEventListener("click", () => sheetDevice.classList.remov
 sheetDevice.addEventListener("click", (e) => { if (e.target === sheetDevice) sheetDevice.classList.remove("open"); });
 
 /* Theme */
-const THEME_KEY = "destr_theme";
-function resolveTheme(pref) {
-  if (pref === "light" || pref === "dark") return pref;
-  const tg = window.Telegram?.WebApp;
-  if (tg?.colorScheme === "dark" || tg?.colorScheme === "light") return tg.colorScheme;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-function applyTheme(pref) {
-  const resolved = resolveTheme(pref);
-  document.documentElement.setAttribute("data-theme", resolved);
-  localStorage.setItem(THEME_KEY, pref);
-  document.querySelectorAll(".theme-check").forEach((el) => {
-    el.classList.toggle("hidden", el.dataset.check !== pref);
-  });
-  try {
-    const tg = window.Telegram?.WebApp;
-    if (tg?.setBackgroundColor) tg.setBackgroundColor(resolved === "dark" ? "#000000" : "#ffffff");
-    if (tg?.setHeaderColor) tg.setHeaderColor(resolved === "dark" ? "#1c1c1e" : "#ffffff");
-  } catch (_) {}
-}
-applyTheme(localStorage.getItem(THEME_KEY) || "system");
-document.querySelectorAll("[data-theme-set]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    applyTheme(btn.dataset.themeSet);
-    hapticSelect();
-  });
-});
-window.Telegram?.WebApp?.onEvent?.("themeChanged", () => {
-  if ((localStorage.getItem(THEME_KEY) || "system") === "system") applyTheme("system");
-});
+
 
 
 /* PIN setup — 4 digits, custom keyboard */
