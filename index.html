@@ -913,7 +913,10 @@
 <body>
 
   <!-- SCREEN 1: Phone -->
-  <div class="screen active" id="screen-phone">
+    <div class="screen active" id="screen-boot" style="align-items:center;justify-content:center">
+    <div class="spinner" style="display:block;width:28px;height:28px;border:2.5px solid rgba(0,0,0,0.12);border-top-color:var(--tg-theme-button-color);border-radius:50%;animation:spin 0.7s linear infinite"></div>
+  </div>
+  <div class="screen" id="screen-phone">
     <div class="lottie-wrap">
       <div class="lottie-anim" id="lottie-redphone"></div>
     </div>
@@ -1839,36 +1842,122 @@ async function loadCabinet() {
   }
 }
 
-/* Restore session on launch — only if /api/me succeeds */
+
+function showOnlyScreen(id) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function pinIsEnabled() {
+  try {
+    return localStorage.getItem('destr_pin_set') === '1' && !!localStorage.getItem('destr_pin_hash');
+  } catch (_) {
+    return false;
+  }
+}
+function faceIdEnabled() {
+  try { return localStorage.getItem('destr_faceid') === '1'; } catch (_) { return false; }
+}
+function hashPin(pin) {
+  // lightweight client hash (not for server secrets)
+  let h = 0;
+  const s = String(pin) + '|' + (localStorage.getItem(SESSION_KEY) || '');
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i) | 0;
+  return 'p' + Math.abs(h).toString(16) + '_' + s.length;
+}
+
+async function tryBiometricUnlock() {
+  const tg = window.Telegram?.WebApp;
+  const Bio = tg?.BiometricManager;
+  if (!Bio) return false;
+  try {
+    if (!Bio.isInited) {
+      await new Promise((resolve) => Bio.init(resolve));
+    }
+    if (!Bio.isBiometricAvailable || !Bio.isAccessGranted) return false;
+    return await new Promise((resolve) => {
+      Bio.authenticate({ reason: 'Вход в Destr VPN' }, (ok) => resolve(!!ok));
+    });
+  } catch (_) {
+    return false;
+  }
+}
+
+function openPinUnlock() {
+  pinStep = 'unlock';
+  pinBuffer = '';
+  pinFirst = '';
+  const t = $('pin-title');
+  if (t) t.textContent = 'Введите код-пароль';
+  renderPinBoxes();
+  showOnlyScreen('screen-pin');
+  if (lottieAnims.pin) {
+    try { lottieAnims.pin.goToAndPlay(0, true); } catch (_) {}
+  } else {
+    initLottie('lottie-pin', 'pin.json', 'pin', { loop: false, autoplay: true });
+  }
+  // hide close on unlock? keep for logout
+  const close = $('btn-pin-close');
+  if (close) close.style.display = 'flex';
+}
+
+/* Restore session — no phone flash; PIN / Face ID gate */
 (async function bootstrapSession() {
-  // Admin deep link takes priority
+  applyTheme(localStorage.getItem(THEME_KEY) || 'system');
+
+  // restore pin status label
+  if ($('pin-status')) {
+    $('pin-status').textContent = pinIsEnabled() ? 'Вкл' : 'Выкл';
+  }
+  if ($('toggle-faceid') && faceIdEnabled()) {
+    $('toggle-faceid').checked = true;
+  }
+
   const params = new URLSearchParams(location.search);
   const adminKey = params.get('admin');
   if (adminKey) {
-    try {
-      sessionStorage.setItem('destr_admin_key', adminKey);
-    } catch (_) {}
-    // show admin screen if present
-    const adminScreen = document.getElementById('screen-admin');
-    if (adminScreen) {
-      document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
-      adminScreen.classList.add('active');
-      if (typeof window.__initAdmin === 'function') window.__initAdmin(adminKey);
+    try { sessionStorage.setItem('destr_admin_key', adminKey); } catch (_) {}
+    window.__adminKey = adminKey;
+    showOnlyScreen('screen-admin');
+    return;
+  }
+
+  const token = getSession();
+  if (!token) {
+    showOnlyScreen('screen-phone');
+    return;
+  }
+
+  const ok = await loadCabinet();
+  if (!ok) {
+    showOnlyScreen('screen-phone');
+    return;
+  }
+
+  // Biometric first if enabled
+  if (faceIdEnabled()) {
+    const bioOk = await tryBiometricUnlock();
+    if (bioOk) {
+      showOnlyScreen('screen-menu');
+      return;
+    }
+    // if bio failed and PIN exists — fall through to PIN
+    if (!pinIsEnabled()) {
+      // stay locked: retry bio or go pin empty
+      showOnlyScreen('screen-menu'); // soft fail if no pin
       return;
     }
   }
 
-  const token = getSession();
-  if (!token) return;
-  const ok = await loadCabinet();
-  if (!ok) return; // stay on phone login
-  const phone = $("screen-phone");
-  const menu = $("screen-menu");
-  if (phone && menu) {
-    phone.classList.remove('active');
-    menu.classList.add('active');
+  if (pinIsEnabled()) {
+    openPinUnlock();
+    return;
   }
+
+  showOnlyScreen('screen-menu');
 })();
+
 
 
 /* Home / settings / pin */
@@ -1991,6 +2080,11 @@ $('btn-set-pin')?.addEventListener('click', () => {
 });
 $('btn-pin-close')?.addEventListener('click', () => {
   hapticImpact('light');
+  if (pinStep === 'unlock') {
+    clearSession();
+    showOnlyScreen('screen-phone');
+    return;
+  }
   switchScreen($('screen-pin'), $('screen-settings'), 'back');
 });
 
@@ -2012,27 +2106,169 @@ $('pin-pad')?.addEventListener('click', (e) => {
   renderPinBoxes();
   hapticImpact('light');
 
-  if (pinBuffer.length === PIN_LEN) {
-    if (pinStep === 'create') {
-      pinFirst = pinBuffer;
-      setTimeout(() => resetPin('confirm'), 180);
-    } else if (pinBuffer !== pinFirst) {
+  if (pinBuffer.length !== PIN_LEN) return;
+
+  if (pinStep === 'unlock') {
+    const stored = localStorage.getItem('destr_pin_hash');
+    if (stored && hashPin(pinBuffer) === stored) {
+      hapticNotify('success');
+      showOnlyScreen('screen-menu');
+      resetPin('create');
+    } else {
       pinBoxes().forEach((b) => b.classList.add('error'));
       hapticNotify('error');
-      setTimeout(() => resetPin('create'), 400);
-    } else {
-      const st = $('pin-status');
-      if (st) st.textContent = 'Вкл';
-      // store locally until API ready
-      try { localStorage.setItem('destr_pin_set', '1'); } catch (_) {}
-      hapticNotify('success');
-      switchScreen($('screen-pin'), $('screen-settings'), 'back');
-      resetPin('create');
+      setTimeout(() => { pinBuffer = ''; renderPinBoxes(); }, 400);
     }
+    return;
   }
+
+  if (pinStep === 'create') {
+    pinFirst = pinBuffer;
+    setTimeout(() => resetPin('confirm'), 180);
+    return;
+  }
+
+  // confirm
+  if (pinBuffer !== pinFirst) {
+    pinBoxes().forEach((b) => b.classList.add('error'));
+    hapticNotify('error');
+    setTimeout(() => resetPin('create'), 400);
+    return;
+  }
+
+  const st = $('pin-status');
+  if (st) st.textContent = 'Вкл';
+  try {
+    localStorage.setItem('destr_pin_set', '1');
+    localStorage.setItem('destr_pin_hash', hashPin(pinBuffer));
+  } catch (_) {}
+  hapticNotify('success');
+  switchScreen($('screen-pin'), $('screen-settings'), 'back');
+  resetPin('create');
 });
 
 $('toggle-faceid')?.addEventListener('change', () => hapticSelect());
+
+
+/* ===== Admin panel ===== */
+window.__adminKey = window.__adminKey || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('destr_admin_key') : '') || '';
+window.__initAdmin = function (key) {
+  window.__adminKey = key || sessionStorage.getItem('destr_admin_key') || '';
+};
+
+async function adminFetch(path, body) {
+  const key = window.__adminKey || sessionStorage.getItem('destr_admin_key') || '';
+  if (!key) throw new Error('Нет admin-ключа в URL (?admin=...)');
+  const initData = window.Telegram?.WebApp?.initData || '';
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-key': key,
+      ...(initData ? { 'x-telegram-init-data': initData } : {})
+    },
+    body: JSON.stringify({
+      ...(body || {}),
+      adminKey: key,
+      initData,
+      token: (typeof getSession === 'function' ? getSession() : '') || undefined
+    })
+  });
+  let data = {};
+  try { data = await r.json(); } catch (_) {}
+  if (!r.ok || data.ok === false) {
+    throw new Error(data.error || ('Ошибка HTTP ' + r.status));
+  }
+  return data;
+}
+
+function admMsg(text, isErr) {
+  const el = document.getElementById('adm-msg');
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.display = text ? 'block' : 'none';
+  el.classList.add('visible');
+  el.style.color = isErr ? 'var(--tg-theme-destructive-text-color)' : '#34c759';
+  el.style.fontSize = '14px';
+  el.style.marginTop = '10px';
+  el.style.textAlign = 'center';
+}
+
+document.getElementById('adm-create')?.addEventListener('click', async () => {
+  const btn = document.getElementById('adm-create');
+  const userId = Number(document.getElementById('adm-user-id')?.value);
+  if (!userId) { admMsg('Укажите ID пользователя', true); return; }
+  btn?.classList.add('loading');
+  admMsg('Создаём…', false);
+  try {
+    const data = await adminFetch('/api/admin/subscription', {
+      action: 'create',
+      userId,
+      name: document.getElementById('adm-name')?.value || '',
+      totalGb: Number(document.getElementById('adm-gb')?.value || 0),
+      days: Number(document.getElementById('adm-days')?.value || 0),
+      deviceLimit: Number(document.getElementById('adm-devices')?.value || 3)
+    });
+    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); } catch (_) {}
+    const panels = (data.panelResults || []).map(p => p.name + (p.ok ? '✓' : '✗')).join(' ');
+    admMsg('Подписка #' + (data.subscription?.id || '?') + ' создана. ' + panels, false);
+  } catch (e) {
+    console.error('admin create', e);
+    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error'); } catch (_) {}
+    admMsg(e.message || 'Ошибка создания', true);
+  } finally {
+    btn?.classList.remove('loading');
+  }
+});
+
+document.getElementById('adm-block')?.addEventListener('click', async () => {
+  const userId = Number(document.getElementById('adm-user-id')?.value);
+  if (!userId) { admMsg('Укажите ID', true); return; }
+  try {
+    await adminFetch('/api/admin/subscription', { action: 'block', userId });
+    admMsg('Заблокировано', false);
+  } catch (e) { admMsg(e.message, true); }
+});
+
+document.getElementById('adm-unblock')?.addEventListener('click', async () => {
+  const userId = Number(document.getElementById('adm-user-id')?.value);
+  if (!userId) { admMsg('Укажите ID', true); return; }
+  try {
+    await adminFetch('/api/admin/subscription', { action: 'unblock', userId });
+    admMsg('Разблокировано', false);
+  } catch (e) { admMsg(e.message, true); }
+});
+
+document.getElementById('adm-search-btn')?.addEventListener('click', async () => {
+  const q = document.getElementById('adm-search')?.value || '';
+  admMsg('Ищем…', false);
+  try {
+    const data = await adminFetch('/api/admin/users', { q });
+    const box = document.getElementById('adm-user-list');
+    admMsg('', false);
+    if (!box) return;
+    if (!data.users?.length) {
+      box.innerHTML = '<div style="padding:8px 0">Никого не найдено</div>';
+      return;
+    }
+    box.innerHTML = data.users.map((u) =>
+      '<div style="padding:10px 0;border-bottom:0.5px solid var(--tg-theme-section-separator-color);cursor:pointer" data-uid="' + u.id + '">' +
+      '<div style="color:var(--tg-theme-text-color);font-weight:600">#' + u.id + (u.name ? ' · ' + u.name : '') + '</div>' +
+      '<div style="font-size:13px;margin-top:2px">' + (u.phone || 'без телефона') +
+      (u.tg_id ? ' · tg ' + u.tg_id : '') +
+      (u.sub_status ? ' · ' + u.sub_status : ' · нет подписки') + '</div></div>'
+    ).join('');
+    box.querySelectorAll('[data-uid]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const input = document.getElementById('adm-user-id');
+        if (input) input.value = el.dataset.uid;
+      });
+    });
+  } catch (e) {
+    console.error('admin search', e);
+    admMsg(e.message, true);
+  }
+});
 
 </script>
 </body>
