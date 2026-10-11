@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>DxS Connect</title>
-  <meta name="destr-build" content="2026-10-10-v8">
+  <meta name="destr-build" content="2026-10-10-v9">
   <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
   <style>
@@ -855,6 +855,10 @@
     .pin-kb.empty {
       pointer-events: none;
     }
+    .pin-kb.bio {
+      color: var(--tg-theme-button-color);
+    }
+    .pin-kb.bio svg { width: 28px; height: 28px; }
     .pin-kb.del {
       color: var(--tg-theme-text-color);
     }
@@ -1154,7 +1158,9 @@
         <button type="button" class="pin-kb" data-key="7">7</button>
         <button type="button" class="pin-kb" data-key="8">8</button>
         <button type="button" class="pin-kb" data-key="9">9</button>
-        <div class="pin-kb empty"></div>
+        <button type="button" class="pin-kb bio" data-key="bio" id="pin-bio-btn" aria-label="Face ID" style="display:none">
+          <span id="pin-bio-icon" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"></span>
+        </button>
         <button type="button" class="pin-kb" data-key="0">0</button>
         <button type="button" class="pin-kb del" data-key="del" aria-label="Удалить">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
@@ -1318,7 +1324,7 @@
   </div>
 
 <script>
-window.__DESTR_BUILD = "2026-10-10-v8";
+window.__DESTR_BUILD = "2026-10-10-v9";
 console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
@@ -1973,12 +1979,34 @@ function pinSalt() {
   }
   return s;
 }
+/** v2 hash — stable, not tied to session token */
 function hashPin(pin) {
-  // stable hash (NOT tied to session token — that broke unlock)
-  let h = 0;
-  const s = String(pin) + '|' + pinSalt();
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i) | 0;
-  return 'p' + Math.abs(h).toString(16) + '_' + s.length;
+  const raw = pinSalt() + '|' + String(pin);
+  try {
+    return 'v2:' + btoa(unescape(encodeURIComponent(raw)));
+  } catch (_) {
+    let h = 0;
+    for (let i = 0; i < raw.length; i++) h = ((h << 5) - h) + raw.charCodeAt(i) | 0;
+    return 'v2:' + Math.abs(h).toString(16) + '_' + raw.length;
+  }
+}
+function verifyPin(pin) {
+  const stored = localStorage.getItem('destr_pin_hash') || '';
+  if (!stored) return false;
+  if (stored.startsWith('v2:')) {
+    return stored === hashPin(pin);
+  }
+  // legacy hashes cannot be verified reliably → fail and ask re-setup
+  return false;
+}
+function savePin(pin) {
+  localStorage.setItem('destr_pin_set', '1');
+  localStorage.setItem('destr_pin_hash', hashPin(pin));
+}
+function clearPin() {
+  localStorage.removeItem('destr_pin_set');
+  localStorage.removeItem('destr_pin_hash');
+  clearPinUnlockFlag();
 }
 function markPinUnlocked() {
   try { sessionStorage.setItem('destr_pin_unlocked', '1'); } catch (_) {}
@@ -1990,7 +2018,6 @@ function clearPinUnlockFlag() {
   try { sessionStorage.removeItem('destr_pin_unlocked'); } catch (_) {}
 }
 
-
 function openPinUnlock() {
   pinStep = 'unlock';
   pinBuffer = '';
@@ -1999,12 +2026,32 @@ function openPinUnlock() {
   if (t) t.textContent = 'Введите код-пароль';
   renderPinBoxes();
   showOnlyScreen('screen-pin');
+  // show Face/Touch key only if biometrics enabled
+  const bioBtn = document.getElementById('pin-bio-btn');
+  const bioIcon = document.getElementById('pin-bio-icon');
+  if (bioBtn) {
+    if (faceIdEnabled()) {
+      bioBtn.style.display = 'flex';
+      if (bioIcon) {
+        bioIcon.innerHTML = (document.getElementById('bio-title')?.textContent === 'Touch ID')
+          ? (typeof SVG_TOUCH !== 'undefined' ? SVG_TOUCH : '')
+          : (typeof SVG_FACE !== 'undefined' ? SVG_FACE : '');
+        // fallback load after refreshBiometricUI
+        refreshBiometricUI().then((label) => {
+          if (bioIcon) bioIcon.innerHTML = (label === 'Touch ID' ? SVG_TOUCH : SVG_FACE);
+        }).catch(() => {
+          if (bioIcon && typeof SVG_FACE !== 'undefined') bioIcon.innerHTML = SVG_FACE;
+        });
+      }
+    } else {
+      bioBtn.style.display = 'none';
+    }
+  }
   if (lottieAnims.pin) {
     try { lottieAnims.pin.goToAndPlay(0, true); } catch (_) {}
   } else {
     initLottie('lottie-pin', 'pin.json', 'pin', { loop: false, autoplay: true });
   }
-  // hide close on unlock? keep for logout
   const close = $('btn-pin-close');
   if (close) close.style.display = 'flex';
 }
@@ -2055,8 +2102,14 @@ document.querySelectorAll("[data-theme-set]").forEach((btn) => {
   });
 });
 window.Telegram?.WebApp?.onEvent?.("themeChanged", () => {
-  if ((localStorage.getItem(THEME_KEY) || "system") === "system") applyTheme("system");
+  const pref = localStorage.getItem(THEME_KEY) || "system";
+  // Never let Telegram dark chrome override explicit light/dark choice
+  if (pref === "system") applyTheme("system");
+  else applyTheme(pref);
 });
+// Re-apply after TG paints (fixes black screen on reopen with light theme)
+setTimeout(() => applyTheme(localStorage.getItem(THEME_KEY) || "system"), 50);
+setTimeout(() => applyTheme(localStorage.getItem(THEME_KEY) || "system"), 300);
 
 
 /* ===== Telegram Biometrics (Face ID / Touch ID) ===== */
@@ -2211,6 +2264,11 @@ if (localStorage.getItem('destr_faceid') === '1') {
     try { sessionStorage.setItem('destr_admin_key', adminKey); } catch (_) {}
     window.__adminKey = adminKey;
     showOnlyScreen('screen-admin');
+    if (typeof window.__initAdmin === 'function') window.__initAdmin(adminKey);
+    else {
+      window.__adminKey = adminKey;
+      setTimeout(() => { if (typeof adminLoadUsers === 'function') adminLoadUsers(''); }, 100);
+    }
     return;
   }
 
@@ -2226,21 +2284,7 @@ if (localStorage.getItem('destr_faceid') === '1') {
     return;
   }
 
-  // Biometric first if enabled
-  if (faceIdEnabled()) {
-    const bioOk = await tryBiometricUnlock();
-    if (bioOk) {
-      showOnlyScreen('screen-menu');
-      return;
-    }
-    // if bio failed and PIN exists — fall through to PIN
-    if (!pinIsEnabled()) {
-      // stay locked: retry bio or go pin empty
-      showOnlyScreen('screen-menu'); // soft fail if no pin
-      return;
-    }
-  }
-
+  // PIN screen first; Face ID only via keyboard icon
   if (pinIsEnabled() && !isPinUnlockedThisSession()) {
     openPinUnlock();
     return;
@@ -2267,12 +2311,17 @@ $("btn-logout").addEventListener("click", async () => {
     await API.post('/api/auth/logout', { token: getSession() });
   } catch (_) {}
   clearSession();
+  try { clearPinUnlockFlag(); } catch (_) {}
   switchScreen($("screen-settings"), $("screen-phone"), 'back');
 });
 
 const sheetDevice = $("sheet-device");
 $("btn-add-device").addEventListener("click", async () => {
   hapticImpact("medium");
+  const btn = $("btn-add-device");
+  if (btn?.classList.contains("loading")) return;
+  btn?.classList.add("loading");
+  if (btn) btn.disabled = true;
   try {
     const data = await API.post('/api/device/add', { token: getSession() });
     const dc = $("device-count");
@@ -2285,13 +2334,15 @@ $("btn-add-device").addEventListener("click", async () => {
   } catch (err) {
     hapticNotify('error');
     alert(err.message || 'Не удалось добавить устройство');
+  } finally {
+    btn?.classList.remove("loading");
+    if (btn) btn.disabled = false;
   }
 });
 $("btn-open-happ")?.addEventListener("click", () => {
   const url = window.__lastSubUrl;
-  if (url) {
-    window.location.href = 'happ://add/' + encodeURIComponent(url);
-  }
+  if (url && typeof openInHapp === 'function') openInHapp(url);
+  else if (url) location.href = 'happ://add/' + encodeURIComponent(url);
   sheetDevice.classList.remove("open");
 });
 $("btn-close-sheet").addEventListener("click", () => sheetDevice.classList.remove("open"));
@@ -2351,9 +2402,28 @@ $('btn-pin-close')?.addEventListener('click', () => {
   switchScreen($('screen-pin'), $('screen-settings'), 'back');
 });
 
-$('pin-pad')?.addEventListener('click', (e) => {
+$('pin-pad')?.addEventListener('click', async (e) => {
   const key = e.target.closest('[data-key]')?.dataset.key;
   if (!key) return;
+
+  if (key === 'bio') {
+    hapticImpact('medium');
+    if (!faceIdEnabled()) return;
+    try {
+      const ok = await tryBiometricUnlock();
+      if (ok) {
+        markPinUnlocked();
+        hapticNotify('success');
+        showOnlyScreen('screen-menu');
+        resetPin('create');
+      } else {
+        hapticNotify('error');
+      }
+    } catch (_) {
+      hapticNotify('error');
+    }
+    return;
+  }
 
   if (key === 'del') {
     if (pinBuffer.length) {
@@ -2372,11 +2442,20 @@ $('pin-pad')?.addEventListener('click', (e) => {
   if (pinBuffer.length !== PIN_LEN) return;
 
   if (pinStep === 'unlock') {
-    const stored = localStorage.getItem('destr_pin_hash');
-    if (stored && hashPin(pinBuffer) === stored) {
-      hapticNotify('success');
+    const stored = localStorage.getItem('destr_pin_hash') || '';
+    if (!stored.startsWith('v2:')) {
+      pinBoxes().forEach((b) => b.classList.add('error'));
+      hapticNotify('error');
+      const t = $('pin-title');
+      if (t) t.textContent = 'Установите код заново в Настройках';
+      setTimeout(() => { pinBuffer = ''; renderPinBoxes(); }, 500);
+      return;
+    }
+    if (verifyPin(pinBuffer)) {
       markPinUnlocked();
+      hapticNotify('success');
       pinBuffer = '';
+      renderPinBoxes();
       showOnlyScreen('screen-menu');
       resetPin('create');
     } else {
@@ -2403,10 +2482,7 @@ $('pin-pad')?.addEventListener('click', (e) => {
 
   const st = $('pin-status');
   if (st) st.textContent = 'Вкл';
-  try {
-    localStorage.setItem('destr_pin_set', '1');
-    localStorage.setItem('destr_pin_hash', hashPin(pinBuffer));
-  } catch (_) {}
+  try { savePin(pinBuffer); } catch (_) {}
   markPinUnlocked();
   hapticNotify('success');
   switchScreen($('screen-pin'), $('screen-settings'), 'back');
@@ -2795,6 +2871,9 @@ function openInHapp(subUrl) {
   addBtn.parentNode.replaceChild(neo, addBtn);
   neo.addEventListener('click', async () => {
     hapticImpact('medium');
+    if (neo.classList.contains('loading')) return;
+    neo.classList.add('loading');
+    neo.disabled = true;
     try {
       const data = await apiAuthPost('/api/device/add', {});
       const dc = document.getElementById('device-count');
@@ -2806,6 +2885,9 @@ function openInHapp(subUrl) {
     } catch (err) {
       hapticNotify('error');
       alert(err.message || 'Не удалось добавить устройство');
+    } finally {
+      neo.classList.remove('loading');
+      neo.disabled = false;
     }
   });
 })();
