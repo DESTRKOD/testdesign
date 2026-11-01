@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>DxS Connect</title>
-  <meta name="destr-build" content="2026-10-10-v9">
+  <meta name="destr-build" content="2026-10-24-v10">
   <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
   <style>
@@ -912,6 +912,174 @@
       line-height: 1.45;
     }
 
+  
+    /* ===== Admin desktop ===== */
+    #screen-admin {
+      max-width: 720px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .adm-toolbar {
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px 8px;
+      flex-wrap: wrap;
+    }
+    .adm-toolbar .btn {
+      flex: 1;
+      min-width: 140px;
+      height: 44px;
+      font-size: 15px;
+    }
+    .adm-panel {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      padding: 0 0 16px;
+    }
+    .adm-panel.open { display: flex; }
+    .adm-search-row {
+      display: flex;
+      gap: 8px;
+      padding: 8px 16px 12px;
+    }
+    .adm-search-row input {
+      flex: 1;
+      height: 42px;
+      border: none;
+      border-radius: 10px;
+      padding: 0 12px;
+      font-size: 15px;
+      background: var(--tg-theme-secondary-bg-color);
+      color: var(--tg-theme-text-color);
+      font-family: inherit;
+      outline: none;
+    }
+    .adm-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 8px 16px;
+    }
+    .adm-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 10px;
+      border-radius: 12px;
+      position: relative;
+    }
+    .adm-row:hover {
+      background: var(--tg-theme-secondary-bg-color);
+    }
+    .adm-row-body {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+    .adm-row-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--tg-theme-text-color);
+    }
+    .adm-row-sub {
+      font-size: 13px;
+      color: var(--tg-theme-hint-color);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .adm-dots {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--tg-theme-hint-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .adm-dots:hover { background: rgba(0,0,0,0.06); color: var(--tg-theme-text-color); }
+    html[data-theme="dark"] .adm-dots:hover { background: rgba(255,255,255,0.08); }
+    .adm-menu {
+      position: absolute;
+      right: 8px;
+      top: 44px;
+      z-index: 50;
+      min-width: 200px;
+      background: var(--tg-theme-section-bg-color);
+      border-radius: 12px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+      border: 0.5px solid var(--tg-theme-section-separator-color);
+      overflow: hidden;
+      display: none;
+    }
+    .adm-menu.open { display: block; }
+    .adm-menu button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--tg-theme-text-color);
+      cursor: pointer;
+    }
+    .adm-menu button:hover {
+      background: var(--tg-theme-secondary-bg-color);
+    }
+    .adm-menu button.danger {
+      color: var(--tg-theme-destructive-text-color);
+    }
+    .adm-form {
+      padding: 8px 16px 16px;
+      overflow-y: auto;
+    }
+    .adm-field {
+      margin-bottom: 12px;
+    }
+    .adm-field label {
+      display: block;
+      font-size: 13px;
+      color: var(--tg-theme-hint-color);
+      margin-bottom: 4px;
+    }
+    .adm-field input {
+      width: 100%;
+      height: 44px;
+      border: none;
+      border-radius: 10px;
+      padding: 0 12px;
+      font-size: 16px;
+      background: var(--tg-theme-secondary-bg-color);
+      color: var(--tg-theme-text-color);
+      font-family: inherit;
+      outline: none;
+    }
+    .adm-link-box {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      background: var(--tg-theme-secondary-bg-color);
+      word-break: break-all;
+      font-size: 13px;
+      color: var(--tg-theme-text-color);
+      display: none;
+    }
+    .adm-link-box.show { display: block; }
+    .adm-hint {
+      font-size: 13px;
+      color: var(--tg-theme-hint-color);
+      padding: 0 16px 8px;
+      line-height: 1.4;
+    }
+
   </style>
 </head>
 <body>
@@ -1180,67 +1348,56 @@
       <div class="nav-header-title">Админ</div>
       <div class="nav-header-side"></div>
     </div>
-    <div style="padding:0 0 24px;overflow-y:auto;flex:1">
-      <div class="section">
-        <div class="section-label">Создать подписку</div>
-        <div class="cell-group" style="padding:12px 16px">
-          <div style="margin-bottom:10px">
-            <div class="stat-label" style="margin-bottom:4px">ID пользователя</div>
-            <input id="adm-user-id" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" inputmode="numeric" placeholder="например 1">
-          </div>
-          <div style="margin-bottom:10px">
-            <div class="stat-label" style="margin-bottom:4px">Имя</div>
-            <input id="adm-name" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" placeholder="На имя">
-          </div>
-          <div style="margin-bottom:10px">
-            <div class="stat-label" style="margin-bottom:4px">Трафик ГБ (0 = ∞)</div>
-            <input id="adm-gb" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" inputmode="numeric" value="0">
-          </div>
-          <div style="margin-bottom:10px">
-            <div class="stat-label" style="margin-bottom:4px">Срок дней (0 = ∞)</div>
-            <input id="adm-days" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" inputmode="numeric" value="0">
-          </div>
-          <div style="margin-bottom:12px">
-            <div class="stat-label" style="margin-bottom:4px">Лимит устройств</div>
-            <input id="adm-devices" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none" inputmode="numeric" value="3">
-          </div>
-          <button type="button" class="btn" id="adm-create"><span class="btn-text">Создать</span><div class="spinner"></div></button>
-          <p id="adm-msg" class="error-text" style="text-align:center;margin-top:8px;min-height:auto"></p>
-        </div>
+    <div class="adm-toolbar">
+      <button type="button" class="btn" id="adm-tab-users"><span class="btn-text">Список пользователей</span></button>
+      <button type="button" class="btn secondary" id="adm-tab-create"><span class="btn-text">Создать подписку</span></button>
+    </div>
+
+    <!-- Users panel -->
+    <div class="adm-panel open" id="adm-panel-users">
+      <div class="adm-search-row">
+        <input id="adm-search" type="search" placeholder="Поиск: id, телефон, имя, tg…">
+        <button type="button" class="btn secondary" id="adm-search-btn" style="flex:0;min-width:88px;height:42px"><span class="btn-text">Найти</span></button>
       </div>
-      <div class="section">
-        <div class="section-label">Действия</div>
-        <div class="cell-group">
-          <button type="button" class="cell" id="adm-block">
-            <div class="cell-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 8l8 8"/></svg></div>
-            <div class="cell-body"><div class="cell-title">Заблокировать (по ID выше)</div></div>
-          </button>
-          <button type="button" class="cell" id="adm-unblock">
-            <div class="cell-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div>
-            <div class="cell-body"><div class="cell-title">Разблокировать</div></div>
-          </button>
-          <button type="button" class="cell" id="adm-edit">
-            <div class="cell-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
-            <div class="cell-body"><div class="cell-title">Сохранить изменения (поля выше)</div></div>
-          </button>
-          <button type="button" class="cell" id="adm-delete">
-            <div class="cell-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></div>
-            <div class="cell-body"><div class="cell-title">Удалить подписку</div></div>
-          </button>
+      <div class="adm-list" id="adm-user-list"></div>
+    </div>
+
+    <!-- Create panel -->
+    <div class="adm-panel" id="adm-panel-create">
+      <p class="adm-hint">ID пользователя необязателен — можно выдать только ссылку для Happ.</p>
+      <div class="adm-form">
+        <div class="adm-field">
+          <label>ID пользователя (необязательно)</label>
+          <input id="adm-user-id" inputmode="numeric" placeholder="оставьте пустым">
         </div>
-      </div>
-      <div class="section">
-        <div class="section-label">Пользователи</div>
-        <div class="cell-group" style="padding:12px 16px">
-          <input id="adm-search" class="phone-input" style="width:100%;height:44px;background:var(--tg-theme-secondary-bg-color);border-radius:10px;padding:0 12px;font-size:17px;border:none;outline:none;margin-bottom:10px" placeholder="Поиск id / телефон / имя">
-          <button type="button" class="btn secondary" id="adm-search-btn" style="margin-top:0"><span class="btn-text">Найти</span></button>
-          <div id="adm-user-list" style="margin-top:12px;font-size:14px;color:var(--tg-theme-hint-color)"></div>
+        <div class="adm-field">
+          <label>Название подписки</label>
+          <input id="adm-name" placeholder="Иван / VIP / …">
+        </div>
+        <div class="adm-field">
+          <label>Трафик ГБ (0 = безлимит)</label>
+          <input id="adm-gb" inputmode="numeric" value="0">
+        </div>
+        <div class="adm-field">
+          <label>Срок дней (0 = бессрочно)</label>
+          <input id="adm-days" inputmode="numeric" value="0">
+        </div>
+        <div class="adm-field">
+          <label>Лимит устройств</label>
+          <input id="adm-devices" inputmode="numeric" value="3">
+        </div>
+        <button type="button" class="btn" id="adm-create"><span class="btn-text">Создать</span><div class="spinner"></div></button>
+        <p id="adm-msg" class="error-text" style="text-align:center;margin-top:10px;min-height:auto"></p>
+        <div class="adm-link-box" id="adm-link-box">
+          <div style="font-size:12px;color:var(--tg-theme-hint-color);margin-bottom:6px">Ссылка подписки</div>
+          <div id="adm-link-text"></div>
+          <button type="button" class="btn secondary" id="adm-link-copy" style="margin-top:10px;height:40px"><span class="btn-text">Скопировать</span></button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Country Modal -->
+<!-- Country Modal -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <div class="modal-header">
@@ -1324,7 +1481,7 @@
   </div>
 
 <script>
-window.__DESTR_BUILD = "2026-10-10-v9";
+window.__DESTR_BUILD = "2026-10-24-v10";
 console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
@@ -2492,111 +2649,10 @@ $('pin-pad')?.addEventListener('click', async (e) => {
 /* faceid toggle → full block */
 
 
-/* ===== Admin panel ===== */
-window.__adminKey = window.__adminKey || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('destr_admin_key') : '') || '';
-
-/* Admin: load all users on open + manage */
-async function adminLoadUsers(q) {
-  const box = document.getElementById('adm-user-list');
-  if (!box) return;
-  box.innerHTML = '<div style="padding:8px 0;color:var(--tg-theme-hint-color)">Загрузка…</div>';
-  try {
-    const data = await adminFetch('/api/admin/users', { q: q || '' });
-    if (!data.users?.length) {
-      box.innerHTML = '<div style="padding:8px 0">Пока нет пользователей</div>';
-      return;
-    }
-    box.innerHTML = data.users.map((u) =>
-      '<div class="adm-user-row" style="padding:12px 0;border-bottom:0.5px solid var(--tg-theme-section-separator-color);cursor:pointer" data-uid="' + u.id + '">' +
-      '<div style="color:var(--tg-theme-text-color);font-weight:600">#' + u.id + (u.name ? ' · ' + u.name : '') + '</div>' +
-      '<div style="font-size:13px;margin-top:2px;color:var(--tg-theme-hint-color)">' + (u.phone || 'без телефона') +
-      (u.tg_id ? ' · tg ' + u.tg_id : '') +
-      (u.sub_status ? ' · подписка: ' + u.sub_status : ' · нет подписки') + '</div></div>'
-    ).join('');
-    box.querySelectorAll('[data-uid]').forEach((el) => {
-      el.addEventListener('click', () => {
-        const id = el.dataset.uid;
-        const input = document.getElementById('adm-user-id');
-        if (input) input.value = id;
-        hapticSelect();
-        openAdminUser(Number(id));
-      });
-    });
-  } catch (e) {
-    box.innerHTML = '<div style="color:var(--tg-theme-destructive-text-color)">' + (e.message || 'Ошибка') + '</div>';
-  }
-}
-
-window.__initAdmin = function (key) {
-  window.__adminKey = key || sessionStorage.getItem('destr_admin_key') || '';
-  adminLoadUsers('');
-};
-
-document.getElementById('adm-delete')?.addEventListener('click', async () => {
-  const userId = Number(document.getElementById('adm-user-id')?.value);
-  if (!userId) { admMsg('Укажите ID', true); return; }
-  if (!confirm('Удалить подписку пользователя #' + userId + '?')) return;
-  try {
-    await adminFetch('/api/admin/subscription', { action: 'delete', userId });
-    hapticNotify('success');
-    admMsg('Подписка удалена', false);
-    adminLoadUsers(document.getElementById('adm-search')?.value || '');
-  } catch (e) {
-    hapticNotify('error');
-    admMsg(e.message, true);
-  }
-});
-
-document.getElementById('adm-edit')?.addEventListener('click', async () => {
-  const userId = Number(document.getElementById('adm-user-id')?.value);
-  if (!userId) { admMsg('Укажите ID', true); return; }
-  try {
-    await adminFetch('/api/admin/subscription', {
-      action: 'edit',
-      userId,
-      name: document.getElementById('adm-name')?.value || undefined,
-      totalGb: Number(document.getElementById('adm-gb')?.value || 0),
-      days: Number(document.getElementById('adm-days')?.value || 0),
-      deviceLimit: Number(document.getElementById('adm-devices')?.value || 3)
-    });
-    hapticNotify('success');
-    admMsg('Сохранено', false);
-    adminLoadUsers('');
-  } catch (e) {
-    hapticNotify('error');
-    admMsg(e.message, true);
-  }
-});
 
 
-async function adminFetch(path, body) {
-  const key = window.__adminKey || sessionStorage.getItem('destr_admin_key') || '';
-  if (!key) throw new Error('Нет admin-ключа в URL (?admin=...)');
-  const initData = window.Telegram?.WebApp?.initData || '';
-  const r = await fetch(path, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-key': key,
-      ...(initData ? { 'x-telegram-init-data': initData } : {})
-    },
-    body: JSON.stringify({
-      ...(body || {}),
-      adminKey: key,
-      initData,
-      token: (typeof getSession === 'function' ? getSession() : '') || undefined
-    })
-  });
-  let data = {};
-  try { data = await r.json(); } catch (_) {}
-  if (!r.ok || data.ok === false) {
-    const err = new Error(data.error || ('Ошибка HTTP ' + r.status));
-    err.code = data.code;
-    err.otherUserId = data.otherUserId;
-    throw err;
-  }
-  return data;
-}
+
+
 
 function admMsg(text, isErr) {
   const el = document.getElementById('adm-msg');
@@ -2610,81 +2666,9 @@ function admMsg(text, isErr) {
   el.style.textAlign = 'center';
 }
 
-document.getElementById('adm-create')?.addEventListener('click', async () => {
-  const btn = document.getElementById('adm-create');
-  const userId = Number(document.getElementById('adm-user-id')?.value);
-  if (!userId) { admMsg('Укажите ID пользователя', true); return; }
-  btn?.classList.add('loading');
-  admMsg('Создаём…', false);
-  try {
-    const data = await adminFetch('/api/admin/subscription', {
-      action: 'create',
-      userId,
-      name: document.getElementById('adm-name')?.value || '',
-      totalGb: Number(document.getElementById('adm-gb')?.value || 0),
-      days: Number(document.getElementById('adm-days')?.value || 0),
-      deviceLimit: Number(document.getElementById('adm-devices')?.value || 3)
-    });
-    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); } catch (_) {}
-    const panels = (data.panelResults || []).map(p => p.name + (p.ok ? '✓' : '✗')).join(' ');
-    admMsg('Подписка #' + (data.subscription?.id || '?') + ' создана. ' + panels, false);
-  } catch (e) {
-    console.error('admin create', e);
-    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error'); } catch (_) {}
-    admMsg(e.message || 'Ошибка создания', true);
-  } finally {
-    btn?.classList.remove('loading');
-  }
-});
 
-document.getElementById('adm-block')?.addEventListener('click', async () => {
-  const userId = Number(document.getElementById('adm-user-id')?.value);
-  if (!userId) { admMsg('Укажите ID', true); return; }
-  try {
-    await adminFetch('/api/admin/subscription', { action: 'block', userId });
-    admMsg('Заблокировано', false);
-  } catch (e) { admMsg(e.message, true); }
-});
 
-document.getElementById('adm-unblock')?.addEventListener('click', async () => {
-  const userId = Number(document.getElementById('adm-user-id')?.value);
-  if (!userId) { admMsg('Укажите ID', true); return; }
-  try {
-    await adminFetch('/api/admin/subscription', { action: 'unblock', userId });
-    admMsg('Разблокировано', false);
-  } catch (e) { admMsg(e.message, true); }
-});
 
-document.getElementById('adm-search-btn')?.addEventListener('click', async () => {
-  const q = document.getElementById('adm-search')?.value || '';
-  admMsg('Ищем…', false);
-  try {
-    const data = await adminFetch('/api/admin/users', { q });
-    const box = document.getElementById('adm-user-list');
-    admMsg('', false);
-    if (!box) return;
-    if (!data.users?.length) {
-      box.innerHTML = '<div style="padding:8px 0">Никого не найдено</div>';
-      return;
-    }
-    box.innerHTML = data.users.map((u) =>
-      '<div style="padding:10px 0;border-bottom:0.5px solid var(--tg-theme-section-separator-color);cursor:pointer" data-uid="' + u.id + '">' +
-      '<div style="color:var(--tg-theme-text-color);font-weight:600">#' + u.id + (u.name ? ' · ' + u.name : '') + '</div>' +
-      '<div style="font-size:13px;margin-top:2px">' + (u.phone || 'без телефона') +
-      (u.tg_id ? ' · tg ' + u.tg_id : '') +
-      (u.sub_status ? ' · ' + u.sub_status : ' · нет подписки') + '</div></div>'
-    ).join('');
-    box.querySelectorAll('[data-uid]').forEach((el) => {
-      el.addEventListener('click', () => {
-        const input = document.getElementById('adm-user-id');
-        if (input) input.value = el.dataset.uid;
-      });
-    });
-  } catch (e) {
-    console.error('admin search', e);
-    admMsg(e.message, true);
-  }
-});
 
 
 /* ===== Devices management ===== */
@@ -2948,6 +2932,269 @@ document.getElementById('btn-phone-save')?.addEventListener('click', async () =>
 
 /* Show phone from /api/me */
 const _loadCabinet = typeof loadCabinet === 'function' ? loadCabinet : null;
+
+
+/* ===== Admin panel (desktop) ===== */
+window.__adminKey = window.__adminKey || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('destr_admin_key') : '') || '';
+
+async function adminFetch(path, body) {
+  const key = window.__adminKey || sessionStorage.getItem('destr_admin_key') || '';
+  if (!key) throw new Error('Нет admin-ключа в URL (?admin=...)');
+  const initData = window.Telegram?.WebApp?.initData || '';
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-key': key,
+      ...(initData ? { 'x-telegram-init-data': initData } : {})
+    },
+    body: JSON.stringify({
+      ...(body || {}),
+      adminKey: key,
+      initData,
+      token: (typeof getSession === 'function' ? getSession() : '') || undefined
+    })
+  });
+  let data = {};
+  try { data = await r.json(); } catch (_) {}
+  if (!r.ok || data.ok === false) {
+    const err = new Error(data.error || ('Ошибка HTTP ' + r.status));
+    err.code = data.code;
+    err.otherUserId = data.otherUserId;
+    throw err;
+  }
+  return data;
+}
+
+function admMsg(text, isErr) {
+  const el = document.getElementById('adm-msg');
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.display = text ? 'block' : 'none';
+  el.classList.add('visible');
+  el.style.color = isErr ? 'var(--tg-theme-destructive-text-color)' : '#34c759';
+  el.style.fontSize = '14px';
+  el.style.marginTop = '10px';
+  el.style.textAlign = 'center';
+}
+
+function admShowPanel(name) {
+  document.getElementById('adm-panel-users')?.classList.toggle('open', name === 'users');
+  document.getElementById('adm-panel-create')?.classList.toggle('open', name === 'create');
+  const u = document.getElementById('adm-tab-users');
+  const c = document.getElementById('adm-tab-create');
+  if (u) {
+    u.classList.toggle('secondary', name !== 'users');
+    if (name === 'users') u.classList.remove('secondary');
+    else u.classList.add('secondary');
+  }
+  if (c) {
+    if (name === 'create') c.classList.remove('secondary');
+    else c.classList.add('secondary');
+  }
+}
+
+document.getElementById('adm-tab-users')?.addEventListener('click', () => {
+  admShowPanel('users');
+  adminLoadUsers(document.getElementById('adm-search')?.value || '');
+});
+document.getElementById('adm-tab-create')?.addEventListener('click', () => {
+  admShowPanel('create');
+});
+
+function closeAllAdmMenus() {
+  document.querySelectorAll('.adm-menu.open').forEach((m) => m.classList.remove('open'));
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.adm-dots') && !e.target.closest('.adm-menu')) {
+    closeAllAdmMenus();
+  }
+});
+
+async function adminLoadUsers(q) {
+  const box = document.getElementById('adm-user-list');
+  if (!box) return;
+  box.innerHTML = '<div style="padding:16px;color:var(--tg-theme-hint-color);text-align:center">Загрузка…</div>';
+  try {
+    const data = await adminFetch('/api/admin/users', { q: q || '' });
+    if (!data.users?.length) {
+      box.innerHTML = '<div style="padding:16px;color:var(--tg-theme-hint-color);text-align:center">Пользователей нет</div>';
+      return;
+    }
+    box.innerHTML = data.users.map((u) => {
+      const sub = u.sub_status ? (' · ' + u.sub_status) : ' · нет подписки';
+      return (
+        '<div class="adm-row" data-uid="' + u.id + '">' +
+          '<div class="adm-row-body" data-act="open">' +
+            '<div class="adm-row-title">#' + u.id + (u.name ? ' · ' + escapeHtml(u.name) : '') + '</div>' +
+            '<div class="adm-row-sub">' + escapeHtml(u.phone || 'без телефона') +
+              (u.tg_id ? ' · tg ' + u.tg_id : '') + sub + '</div>' +
+          '</div>' +
+          '<button type="button" class="adm-dots" data-act="menu" aria-label="Меню">' +
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>' +
+          '</button>' +
+          '<div class="adm-menu">' +
+            '<button type="button" data-menu="phone">Сменить номер</button>' +
+            '<button type="button" data-menu="name">Сменить имя</button>' +
+            '<button type="button" data-menu="traffic">Сменить трафик</button>' +
+            '<button type="button" data-menu="expiry">Сменить дату окончания</button>' +
+            '<button type="button" data-menu="block" class="danger">Выключить подписку</button>' +
+            '<button type="button" data-menu="unblock">Включить подписку</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '<div style="padding:16px;color:var(--tg-theme-destructive-text-color);text-align:center">' +
+      escapeHtml(e.message || 'Ошибка') + '</div>';
+  }
+}
+
+document.getElementById('adm-user-list')?.addEventListener('click', async (e) => {
+  const row = e.target.closest('.adm-row');
+  if (!row) return;
+  const uid = Number(row.dataset.uid);
+  const dots = e.target.closest('[data-act="menu"]');
+  const body = e.target.closest('[data-act="open"]');
+  const menuBtn = e.target.closest('[data-menu]');
+
+  if (dots) {
+    e.stopPropagation();
+    const menu = row.querySelector('.adm-menu');
+    const was = menu?.classList.contains('open');
+    closeAllAdmMenus();
+    if (!was) menu?.classList.add('open');
+    return;
+  }
+
+  if (menuBtn) {
+    e.stopPropagation();
+    closeAllAdmMenus();
+    const act = menuBtn.dataset.menu;
+    try {
+      if (act === 'phone') {
+        const phone = prompt('Новый номер (+7900…), пусто = отвязать');
+        if (phone === null) return;
+        await adminFetch('/api/admin/set-phone', {
+          action: 'set-phone',
+          userId: uid,
+          phone: phone.trim(),
+          force: true
+        });
+        alert('Номер обновлён');
+      } else if (act === 'name') {
+        const name = prompt('Имя пользователя / подписки');
+        if (name === null || !name.trim()) return;
+        await adminFetch('/api/admin/set-name', {
+          action: 'set-name',
+          userId: uid,
+          name: name.trim()
+        });
+        alert('Имя обновлено');
+      } else if (act === 'traffic') {
+        const gb = prompt('Трафик ГБ (0 = безлимит)', '0');
+        if (gb === null) return;
+        await adminFetch('/api/admin/subscription', {
+          action: 'edit',
+          userId: uid,
+          totalGb: Number(gb)
+        });
+        alert('Трафик обновлён');
+      } else if (act === 'expiry') {
+        const days = prompt('Срок в днях от сейчас (0 = бессрочно)', '30');
+        if (days === null) return;
+        await adminFetch('/api/admin/subscription', {
+          action: 'edit',
+          userId: uid,
+          days: Number(days)
+        });
+        alert('Срок обновлён');
+      } else if (act === 'block') {
+        if (!confirm('Выключить подписку пользователя #' + uid + '?')) return;
+        await adminFetch('/api/admin/subscription', { action: 'block', userId: uid });
+        alert('Подписка выключена');
+      } else if (act === 'unblock') {
+        await adminFetch('/api/admin/subscription', { action: 'unblock', userId: uid });
+        alert('Подписка включена');
+      }
+      adminLoadUsers(document.getElementById('adm-search')?.value || '');
+    } catch (err) {
+      alert(err.message || 'Ошибка');
+    }
+    return;
+  }
+
+  if (body) {
+    const input = document.getElementById('adm-user-id');
+    if (input) input.value = String(uid);
+    if (typeof openAdminUser === 'function') openAdminUser(uid);
+  }
+});
+
+document.getElementById('adm-search-btn')?.addEventListener('click', () => {
+  adminLoadUsers(document.getElementById('adm-search')?.value || '');
+});
+document.getElementById('adm-search')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    adminLoadUsers(document.getElementById('adm-search')?.value || '');
+  }
+});
+
+document.getElementById('adm-create')?.addEventListener('click', async () => {
+  const btn = document.getElementById('adm-create');
+  const rawId = document.getElementById('adm-user-id')?.value?.trim();
+  const userId = rawId ? Number(rawId) : null;
+  btn?.classList.add('loading');
+  admMsg('Создаём…', false);
+  const linkBox = document.getElementById('adm-link-box');
+  linkBox?.classList.remove('show');
+  try {
+    const data = await adminFetch('/api/admin/subscription', {
+      action: 'create',
+      userId: userId || undefined,
+      name: document.getElementById('adm-name')?.value || 'Подписка',
+      totalGb: Number(document.getElementById('adm-gb')?.value || 0),
+      days: Number(document.getElementById('adm-days')?.value || 0),
+      deviceLimit: Number(document.getElementById('adm-devices')?.value || 3)
+    });
+    hapticNotify('success');
+    const url = data.subscriptionUrl || '';
+    admMsg(
+      'Готово' + (data.subscription?.id ? ' · #' + data.subscription.id : '') +
+      (data.subscription?.xuiEmail ? ' · 3x: ' + data.subscription.xuiEmail : ''),
+      false
+    );
+    if (url) {
+      const lt = document.getElementById('adm-link-text');
+      if (lt) lt.textContent = url;
+      linkBox?.classList.add('show');
+      try { await navigator.clipboard.writeText(url); } catch (_) {}
+    }
+  } catch (e) {
+    hapticNotify('error');
+    admMsg(e.message || 'Ошибка', true);
+  } finally {
+    btn?.classList.remove('loading');
+  }
+});
+
+document.getElementById('adm-link-copy')?.addEventListener('click', async () => {
+  const t = document.getElementById('adm-link-text')?.textContent || '';
+  if (!t) return;
+  try {
+    await navigator.clipboard.writeText(t);
+    admMsg('Скопировано', false);
+  } catch (_) {
+    prompt('Скопируйте ссылку:', t);
+  }
+});
+
+window.__initAdmin = function (key) {
+  window.__adminKey = key || sessionStorage.getItem('destr_admin_key') || '';
+  admShowPanel('users');
+  adminLoadUsers('');
+};
 
 </script>
 

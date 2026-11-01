@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/admin/set-name",
+      "destination": "/api/admin?action=set-name"
+    },
+    {
       "source": "/api/admin/set-phone",
       "destination": "/api/admin?action=set-phone"
     },
