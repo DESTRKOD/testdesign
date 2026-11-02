@@ -4,6 +4,7 @@ import panelsCheck from '../api-handlers/admin-panels-check.js';
 import userDetail from '../api-handlers/admin-user-detail.js';
 import setPhone from '../api-handlers/admin-set-phone.js';
 import setName from '../api-handlers/admin-set-name.js';
+import setPayment from '../api-handlers/admin-set-payment.js';
 
 function actionOf(req) {
   if (req.query?.action) return String(req.query.action);
@@ -22,5 +23,6 @@ export default async function handler(req, res) {
   if (action === 'user' || action === 'user-detail') return userDetail(req, res);
   if (action === 'set-phone') return setPhone(req, res);
   if (action === 'set-name') return setName(req, res);
+  if (action === 'set-payment') return setPayment(req, res);
   return res.status(404).json({ ok: false, error: 'Unknown admin action: ' + action });
 }

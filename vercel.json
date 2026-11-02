@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/admin/set-payment",
+      "destination": "/api/admin?action=set-payment"
+    },
+    {
       "source": "/api/admin/set-name",
       "destination": "/api/admin?action=set-name"
     },

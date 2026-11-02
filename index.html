@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>DxS Connect</title>
-  <meta name="destr-build" content="2026-10-24-v10">
+  <meta name="destr-build" content="2026-11-02-v11">
   <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <style>
     :root {
       --tg-theme-bg-color: #ffffff;
@@ -1073,6 +1074,46 @@
       display: none;
     }
     .adm-link-box.show { display: block; }
+    .adm-qr-wrap {
+      margin-top: 14px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .adm-qr-wrap.show { display: flex; }
+    .adm-qr-wrap canvas {
+      width: 220px;
+      height: 220px;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .adm-pay {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .adm-pay.paid {
+      background: rgba(52,199,89,0.18);
+      color: #248a3d;
+    }
+    .adm-pay.unpaid {
+      background: rgba(255,59,48,0.15);
+      color: #d70015;
+    }
+    .adm-pay.unknown {
+      background: rgba(142,142,147,0.2);
+      color: var(--tg-theme-hint-color);
+    }
+    .adm-row-kind {
+      font-size: 11px;
+      color: var(--tg-theme-hint-color);
+      margin-bottom: 2px;
+    }
     .adm-hint {
       font-size: 13px;
       color: var(--tg-theme-hint-color);
@@ -1392,6 +1433,10 @@
           <div style="font-size:12px;color:var(--tg-theme-hint-color);margin-bottom:6px">Ссылка подписки</div>
           <div id="adm-link-text"></div>
           <button type="button" class="btn secondary" id="adm-link-copy" style="margin-top:10px;height:40px"><span class="btn-text">Скопировать</span></button>
+          <div class="adm-qr-wrap" id="adm-qr-wrap">
+            <canvas id="adm-qr-canvas" width="280" height="280"></canvas>
+            <div style="font-size:12px;color:var(--tg-theme-hint-color)">QR для Happ (с логотипом)</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1481,7 +1526,7 @@
   </div>
 
 <script>
-window.__DESTR_BUILD = "2026-10-24-v10";
+window.__DESTR_BUILD = "2026-11-02-v11";
 console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
@@ -2934,6 +2979,80 @@ document.getElementById('btn-phone-save')?.addEventListener('click', async () =>
 const _loadCabinet = typeof loadCabinet === 'function' ? loadCabinet : null;
 
 
+
+/* QR with center logo for admin */
+const ADM_LOGO_URLS = ['/logo.png', '/logo.svg', '/favicon.png', '/favicon.ico'];
+let __admLogoImg = null;
+let __admLogoTried = false;
+
+function loadAdmLogo() {
+  return new Promise((resolve) => {
+    if (__admLogoImg) return resolve(__admLogoImg);
+    if (__admLogoTried) return resolve(null);
+    __admLogoTried = true;
+    let i = 0;
+    function tryNext() {
+      if (i >= ADM_LOGO_URLS.length) return resolve(null);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => { __admLogoImg = img; resolve(img); };
+      img.onerror = () => { i++; tryNext(); };
+      img.src = ADM_LOGO_URLS[i] + '?v=1';
+    }
+    tryNext();
+  });
+}
+
+async function renderAdminQr(text) {
+  const canvas = document.getElementById('adm-qr-canvas');
+  const wrap = document.getElementById('adm-qr-wrap');
+  if (!canvas || !text) return;
+  if (typeof QRCode === 'undefined') {
+    wrap?.classList.remove('show');
+    return;
+  }
+  const size = 280;
+  await QRCode.toCanvas(canvas, text, {
+    width: size,
+    margin: 2,
+    color: { dark: '#000000', light: '#ffffff' },
+    errorCorrectionLevel: 'H' // high — needed for logo overlay
+  });
+  const ctx = canvas.getContext('2d');
+  const logo = await loadAdmLogo();
+  const logoSize = Math.round(size * 0.22);
+  const x = (size - logoSize) / 2;
+  const y = (size - logoSize) / 2;
+  const pad = 6;
+  // white rounded plate under logo
+  ctx.fillStyle = '#ffffff';
+  const r = 10;
+  const px = x - pad, py = y - pad, pw = logoSize + pad * 2, ph = logoSize + pad * 2;
+  ctx.beginPath();
+  ctx.moveTo(px + r, py);
+  ctx.arcTo(px + pw, py, px + pw, py + ph, r);
+  ctx.arcTo(px + pw, py + ph, px, py + ph, r);
+  ctx.arcTo(px, py + ph, px, py, r);
+  ctx.arcTo(px, py, px + pw, py, r);
+  ctx.closePath();
+  ctx.fill();
+  if (logo) {
+    ctx.drawImage(logo, x, y, logoSize, logoSize);
+  } else {
+    // fallback brand mark
+    ctx.fillStyle = '#3390ec';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, logoSize, logoSize, 12) : ctx.rect(x, y, logoSize, logoSize);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold ' + Math.round(logoSize * 0.45) + 'px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('D', x + logoSize / 2, y + logoSize / 2 + 1);
+  }
+  wrap?.classList.add('show');
+}
+
 /* ===== Admin panel (desktop) ===== */
 window.__adminKey = window.__adminKey || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('destr_admin_key') : '') || '';
 
@@ -3022,25 +3141,44 @@ async function adminLoadUsers(q) {
       return;
     }
     box.innerHTML = data.users.map((u) => {
-      const sub = u.sub_status ? (' · ' + u.sub_status) : ' · нет подписки';
+      const isOrphan = u.kind === 'orphan' || !u.id;
+      const pay = (u.payment_status || 'unpaid');
+      const payCls = pay === 'paid' ? 'paid' : (pay === 'unpaid' ? 'unpaid' : 'unknown');
+      const payLabel = pay === 'paid' ? 'оплачено' : (pay === 'unpaid' ? 'не оплачено' : '—');
+      const title = isOrphan
+        ? (escapeHtml(u.display_name || u.name || 'Ссылка') + ' <span class="adm-pay ' + payCls + '">' + payLabel + '</span>')
+        : ('#' + u.id + (u.name ? ' · ' + escapeHtml(u.name) : '') + ' <span class="adm-pay ' + payCls + '">' + payLabel + '</span>');
+      const subLine = isOrphan
+        ? ('без пользователя · sub #' + (u.sub_id || '') + (u.sub_status ? ' · ' + u.sub_status : ''))
+        : (escapeHtml(u.phone || 'без телефона') + (u.tg_id ? ' · tg ' + u.tg_id : '') + (u.sub_status ? ' · ' + u.sub_status : ' · нет подписки'));
+      const menu = isOrphan
+        ? ('<button type="button" data-menu="name">Сменить имя</button>' +
+           '<button type="button" data-menu="traffic">Сменить трафик</button>' +
+           '<button type="button" data-menu="expiry">Сменить дату окончания</button>' +
+           '<button type="button" data-menu="paid">Оплачено</button>' +
+           '<button type="button" data-menu="unpaid">Не оплачено</button>' +
+           '<button type="button" data-menu="copy">Скопировать ссылку</button>' +
+           '<button type="button" data-menu="block" class="danger">Выключить подписку</button>' +
+           '<button type="button" data-menu="unblock">Включить подписку</button>')
+        : ('<button type="button" data-menu="phone">Сменить номер</button>' +
+           '<button type="button" data-menu="name">Сменить имя</button>' +
+           '<button type="button" data-menu="traffic">Сменить трафик</button>' +
+           '<button type="button" data-menu="expiry">Сменить дату окончания</button>' +
+           '<button type="button" data-menu="paid">Оплачено</button>' +
+           '<button type="button" data-menu="unpaid">Не оплачено</button>' +
+           '<button type="button" data-menu="block" class="danger">Выключить подписку</button>' +
+           '<button type="button" data-menu="unblock">Включить подписку</button>');
       return (
-        '<div class="adm-row" data-uid="' + u.id + '">' +
+        '<div class="adm-row" data-uid="' + (u.id || '') + '" data-subid="' + (u.sub_id || '') + '" data-kind="' + (isOrphan ? 'orphan' : 'user') + '" data-token="' + escapeHtml(u.sub_token || '') + '">' +
           '<div class="adm-row-body" data-act="open">' +
-            '<div class="adm-row-title">#' + u.id + (u.name ? ' · ' + escapeHtml(u.name) : '') + '</div>' +
-            '<div class="adm-row-sub">' + escapeHtml(u.phone || 'без телефона') +
-              (u.tg_id ? ' · tg ' + u.tg_id : '') + sub + '</div>' +
+            (isOrphan ? '<div class="adm-row-kind">только ссылка</div>' : '') +
+            '<div class="adm-row-title">' + title + '</div>' +
+            '<div class="adm-row-sub">' + subLine + '</div>' +
           '</div>' +
           '<button type="button" class="adm-dots" data-act="menu" aria-label="Меню">' +
             '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>' +
           '</button>' +
-          '<div class="adm-menu">' +
-            '<button type="button" data-menu="phone">Сменить номер</button>' +
-            '<button type="button" data-menu="name">Сменить имя</button>' +
-            '<button type="button" data-menu="traffic">Сменить трафик</button>' +
-            '<button type="button" data-menu="expiry">Сменить дату окончания</button>' +
-            '<button type="button" data-menu="block" class="danger">Выключить подписку</button>' +
-            '<button type="button" data-menu="unblock">Включить подписку</button>' +
-          '</div>' +
+          '<div class="adm-menu">' + menu + '</div>' +
         '</div>'
       );
     }).join('');
@@ -3071,8 +3209,12 @@ document.getElementById('adm-user-list')?.addEventListener('click', async (e) =>
     e.stopPropagation();
     closeAllAdmMenus();
     const act = menuBtn.dataset.menu;
+    const subId = Number(row.dataset.subid || 0);
+    const token = row.dataset.token || '';
+    const kind = row.dataset.kind || 'user';
     try {
       if (act === 'phone') {
+        if (!uid) { alert('Нет пользователя'); return; }
         const phone = prompt('Новый номер (+7900…), пусто = отвязать');
         if (phone === null) return;
         await adminFetch('/api/admin/set-phone', {
@@ -3083,20 +3225,29 @@ document.getElementById('adm-user-list')?.addEventListener('click', async (e) =>
         });
         alert('Номер обновлён');
       } else if (act === 'name') {
-        const name = prompt('Имя пользователя / подписки');
+        const name = prompt('Имя / название подписки');
         if (name === null || !name.trim()) return;
-        await adminFetch('/api/admin/set-name', {
-          action: 'set-name',
-          userId: uid,
-          name: name.trim()
-        });
+        if (uid) {
+          await adminFetch('/api/admin/set-name', {
+            action: 'set-name',
+            userId: uid,
+            name: name.trim()
+          });
+        } else if (subId) {
+          await adminFetch('/api/admin/subscription', {
+            action: 'edit',
+            subscriptionId: subId,
+            name: name.trim()
+          });
+        }
         alert('Имя обновлено');
       } else if (act === 'traffic') {
         const gb = prompt('Трафик ГБ (0 = безлимит)', '0');
         if (gb === null) return;
         await adminFetch('/api/admin/subscription', {
           action: 'edit',
-          userId: uid,
+          userId: uid || undefined,
+          subscriptionId: subId || undefined,
           totalGb: Number(gb)
         });
         alert('Трафик обновлён');
@@ -3105,16 +3256,38 @@ document.getElementById('adm-user-list')?.addEventListener('click', async (e) =>
         if (days === null) return;
         await adminFetch('/api/admin/subscription', {
           action: 'edit',
-          userId: uid,
+          userId: uid || undefined,
+          subscriptionId: subId || undefined,
           days: Number(days)
         });
         alert('Срок обновлён');
+      } else if (act === 'paid' || act === 'unpaid') {
+        await adminFetch('/api/admin/set-payment', {
+          action: 'set-payment',
+          userId: uid || undefined,
+          subscriptionId: subId || undefined,
+          payment_status: act
+        });
+        alert(act === 'paid' ? 'Отмечено: оплачено' : 'Отмечено: не оплачено');
+      } else if (act === 'copy') {
+        if (!token) { alert('Нет токена'); return; }
+        const url = location.origin + '/api/sub?token=' + encodeURIComponent(token);
+        try { await navigator.clipboard.writeText(url); alert('Ссылка скопирована'); }
+        catch (_) { prompt('Ссылка:', url); }
       } else if (act === 'block') {
-        if (!confirm('Выключить подписку пользователя #' + uid + '?')) return;
-        await adminFetch('/api/admin/subscription', { action: 'block', userId: uid });
+        if (!confirm('Выключить подписку?')) return;
+        await adminFetch('/api/admin/subscription', {
+          action: 'block',
+          userId: uid || undefined,
+          subscriptionId: subId || undefined
+        });
         alert('Подписка выключена');
       } else if (act === 'unblock') {
-        await adminFetch('/api/admin/subscription', { action: 'unblock', userId: uid });
+        await adminFetch('/api/admin/subscription', {
+          action: 'unblock',
+          userId: uid || undefined,
+          subscriptionId: subId || undefined
+        });
         alert('Подписка включена');
       }
       adminLoadUsers(document.getElementById('adm-search')?.value || '');
@@ -3170,6 +3343,7 @@ document.getElementById('adm-create')?.addEventListener('click', async () => {
       if (lt) lt.textContent = url;
       linkBox?.classList.add('show');
       try { await navigator.clipboard.writeText(url); } catch (_) {}
+      try { await renderAdminQr(url); } catch (e) { console.warn('qr', e); }
     }
   } catch (e) {
     hapticNotify('error');
