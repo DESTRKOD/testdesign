@@ -1526,7 +1526,7 @@
   </div>
 
 <script>
-window.__DESTR_BUILD = "2026-11-02-v11";
+window.__DESTR_BUILD = "2026-11-02-v12";
 console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
@@ -2984,6 +2984,7 @@ const _loadCabinet = typeof loadCabinet === 'function' ? loadCabinet : null;
 const ADM_LOGO_URLS = ['/logo.png', '/logo.svg', '/favicon.png', '/favicon.ico'];
 let __admLogoImg = null;
 let __admLogoTried = false;
+let __qrLibPromise = null;
 
 function loadAdmLogo() {
   return new Promise((resolve) => {
@@ -2991,43 +2992,57 @@ function loadAdmLogo() {
     if (__admLogoTried) return resolve(null);
     __admLogoTried = true;
     let i = 0;
+    const timer = setTimeout(() => resolve(null), 2000);
+    function done(img) {
+      clearTimeout(timer);
+      resolve(img || null);
+    }
     function tryNext() {
-      if (i >= ADM_LOGO_URLS.length) return resolve(null);
+      if (i >= ADM_LOGO_URLS.length) return done(null);
       const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => { __admLogoImg = img; resolve(img); };
+      img.onload = () => { __admLogoImg = img; done(img); };
       img.onerror = () => { i++; tryNext(); };
-      img.src = ADM_LOGO_URLS[i] + '?v=1';
+      img.src = ADM_LOGO_URLS[i] + '?v=2';
     }
     tryNext();
   });
 }
 
-async function renderAdminQr(text) {
-  const canvas = document.getElementById('adm-qr-canvas');
-  const wrap = document.getElementById('adm-qr-wrap');
-  if (!canvas || !text) return;
-  if (typeof QRCode === 'undefined') {
-    wrap?.classList.remove('show');
-    return;
-  }
-  const size = 280;
-  await QRCode.toCanvas(canvas, text, {
-    width: size,
-    margin: 2,
-    color: { dark: '#000000', light: '#ffffff' },
-    errorCorrectionLevel: 'H' // high — needed for logo overlay
+function ensureQrLib() {
+  if (typeof QRCode !== 'undefined') return Promise.resolve(true);
+  if (__qrLibPromise) return __qrLibPromise;
+  __qrLibPromise = new Promise((resolve) => {
+    const urls = [
+      'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js',
+      'https://unpkg.com/qrcode@1.5.4/build/qrcode.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'
+    ];
+    let i = 0;
+    function next() {
+      if (i >= urls.length) return resolve(false);
+      const s = document.createElement('script');
+      s.src = urls[i++];
+      s.async = true;
+      s.onload = () => {
+        if (typeof QRCode !== 'undefined') resolve(true);
+        else next();
+      };
+      s.onerror = () => next();
+      document.head.appendChild(s);
+    }
+    next();
   });
-  const ctx = canvas.getContext('2d');
-  const logo = await loadAdmLogo();
+  return __qrLibPromise;
+}
+
+function drawLogoOnCanvas(ctx, size, logo) {
   const logoSize = Math.round(size * 0.22);
   const x = (size - logoSize) / 2;
   const y = (size - logoSize) / 2;
   const pad = 6;
-  // white rounded plate under logo
-  ctx.fillStyle = '#ffffff';
   const r = 10;
   const px = x - pad, py = y - pad, pw = logoSize + pad * 2, ph = logoSize + pad * 2;
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
   ctx.moveTo(px + r, py);
   ctx.arcTo(px + pw, py, px + pw, py + ph, r);
@@ -3037,20 +3052,108 @@ async function renderAdminQr(text) {
   ctx.closePath();
   ctx.fill();
   if (logo) {
-    ctx.drawImage(logo, x, y, logoSize, logoSize);
+    try { ctx.drawImage(logo, x, y, logoSize, logoSize); } catch (_) {}
   } else {
-    // fallback brand mark
     ctx.fillStyle = '#3390ec';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, logoSize, logoSize, 12) : ctx.rect(x, y, logoSize, logoSize);
-    ctx.fill();
+    ctx.fillRect(x, y, logoSize, logoSize);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold ' + Math.round(logoSize * 0.45) + 'px -apple-system,sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('D', x + logoSize / 2, y + logoSize / 2 + 1);
   }
+}
+
+async function renderAdminQr(text) {
+  const canvas = document.getElementById('adm-qr-canvas');
+  const wrap = document.getElementById('adm-qr-wrap');
+  if (!canvas || !text) {
+    console.warn('qr: no canvas or text');
+    return;
+  }
+  // always reveal container so user sees something
   wrap?.classList.add('show');
+  const size = 280;
+  canvas.width = size;
+  canvas.height = size;
+
+  const okLib = await ensureQrLib();
+  const logo = await loadAdmLogo();
+
+  // Primary: QRCode.toCanvas (npm qrcode)
+  if (okLib && typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
+    try {
+      await QRCode.toCanvas(canvas, text, {
+        width: size,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' },
+        errorCorrectionLevel: 'H'
+      });
+      drawLogoOnCanvas(canvas.getContext('2d'), size, logo);
+      return;
+    } catch (e) {
+      console.warn('qr toCanvas failed', e);
+    }
+  }
+
+  // Secondary: qrcode-generator (cdnjs) — different API
+  if (typeof qrcode === 'function') {
+    try {
+      const qr = qrcode(0, 'H');
+      qr.addData(text);
+      qr.make();
+      const cell = Math.floor(size / qr.getModuleCount());
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#000';
+      const count = qr.getModuleCount();
+      const offset = Math.floor((size - cell * count) / 2);
+      for (let r = 0; r < count; r++) {
+        for (let c = 0; c < count; c++) {
+          if (qr.isDark(r, c)) {
+            ctx.fillRect(offset + c * cell, offset + r * cell, cell, cell);
+          }
+        }
+      }
+      drawLogoOnCanvas(ctx, size, logo);
+      return;
+    } catch (e) {
+      console.warn('qr generator failed', e);
+    }
+  }
+
+  // Fallback: external image (always works)
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const src =
+      'https://api.qrserver.com/v1/create-qr-code/?size=' +
+      size +
+      'x' +
+      size +
+      '&ecc=H&margin=8&data=' +
+      encodeURIComponent(text);
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = src;
+    });
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, size, size);
+    ctx.drawImage(img, 0, 0, size, size);
+    drawLogoOnCanvas(ctx, size, logo);
+  } catch (e) {
+    console.warn('qr fallback image failed', e);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f2f2f7';
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#8e8e93';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Не удалось нарисовать QR', size / 2, size / 2);
+  }
 }
 
 /* ===== Admin panel (desktop) ===== */
