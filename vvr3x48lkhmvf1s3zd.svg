@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">DESTR geometric D icon</title>
+  <path fill="#111111" d="     M 90,128     H 281     C 366,128 414,179 414,256     C 414,333 366,384 281,384     H 204     L 260,328     H 281     C 332,328 357,301 357,256     C 357,211 332,184 281,184     H 146     L 90,128     Z"/>
+  <path fill="#111111" d="     M 94,384     L 205,273     L 246,314     L 176,384     Z"/>
+</svg>

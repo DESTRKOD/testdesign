@@ -293,6 +293,12 @@ export default async function handler(req, res) {
       await migrate();
       const sub = await getSubscriptionByEmail(email);
       if (sub) {
+        if (String(sub.status || '') === 'blocked') {
+          res.statusCode = 403;
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+          res.end('Subscription blocked');
+          return;
+        }
         totalGb = Number(sub.total_gb || 0);
         expiryAt = sub.expiry_at || null;
         displayName = sub.display_name || displayName;

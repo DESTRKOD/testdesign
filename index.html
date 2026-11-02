@@ -1435,7 +1435,6 @@
           <button type="button" class="btn secondary" id="adm-link-copy" style="margin-top:10px;height:40px"><span class="btn-text">Скопировать</span></button>
           <div class="adm-qr-wrap" id="adm-qr-wrap">
             <canvas id="adm-qr-canvas" width="280" height="280"></canvas>
-            <div style="font-size:12px;color:var(--tg-theme-hint-color)">QR для Happ (с логотипом)</div>
           </div>
         </div>
       </div>
@@ -1526,7 +1525,7 @@
   </div>
 
 <script>
-window.__DESTR_BUILD = "2026-11-02-v12";
+window.__DESTR_BUILD = "2026-11-02-v13";
 console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
@@ -2981,7 +2980,7 @@ const _loadCabinet = typeof loadCabinet === 'function' ? loadCabinet : null;
 
 
 /* QR with center logo for admin */
-const ADM_LOGO_URLS = ['/logo.png', '/logo.svg', '/favicon.png', '/favicon.ico'];
+const ADM_LOGO_URLS = ['/images/logo.svg', '/images/logo.png', '/logo.svg', '/logo.png'];
 let __admLogoImg = null;
 let __admLogoTried = false;
 let __qrLibPromise = null;
