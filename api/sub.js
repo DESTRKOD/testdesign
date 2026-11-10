@@ -362,12 +362,14 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('profile-title', titleHdr);
     res.setHeader('Profile-Title', titleHdr);
-    res.setHeader('announce', announce);
-    res.setHeader('Announce', announce);
-    res.setHeader('support-url', statusUrl);
-    res.setHeader('Support-Url', statusUrl);
-    res.setHeader('profile-web-page-url', statusUrl);
-    res.setHeader('Profile-Web-Page-Url', statusUrl);
+    // HTTP headers must be ASCII — Cyrillic "announce" text only in body (#announce:)
+    // support-url is ASCII URL, safe for headers
+    if (statusUrl && /^[\x20-\x7E]+$/.test(statusUrl)) {
+      res.setHeader('support-url', statusUrl);
+      res.setHeader('Support-Url', statusUrl);
+      res.setHeader('profile-web-page-url', statusUrl);
+      res.setHeader('Profile-Web-Page-Url', statusUrl);
+    }
     res.setHeader('subscription-userinfo', userinfo);
     res.setHeader('Subscription-Userinfo', userinfo);
     res.setHeader('profile-update-interval', '12');
