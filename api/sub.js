@@ -228,59 +228,75 @@ export default async function handler(req, res) {
 
     console.log('Sub request for email:', email);
 
+    function withTimeout(promise, ms, label) {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(label + ' timeout ' + ms + 'ms')), ms)
+        )
+      ]);
+    }
+
     for (const [key, panel] of Object.entries(panels)) {
       try {
         if (!panel?.url) {
-          errors.push(`${key}: no panel url`);
+          errors.push(key + ': no panel url');
           continue;
         }
 
-        const [clientRaw, inboundRaw] = await Promise.all([
-          getClient(panel, email).catch((e) => {
-            console.error(`getClient ${key}:`, e.message);
-            return null;
-          }),
-          getInbound(panel)
-        ]);
+        let inboundRaw = null;
+        try {
+          inboundRaw = await withTimeout(getInbound(panel), 8000, key + ' inbound');
+        } catch (e) {
+          errors.push(key + ': inbound ' + (e.message || e));
+          continue;
+        }
 
-        console.log(
-          `Panel ${key} getClient id/uuid:`,
-          clientRaw?.id,
-          clientRaw?.uuid
-        );
+        let clientRaw = null;
+        try {
+          clientRaw = await withTimeout(
+            getClient(panel, email).catch(() => null),
+            6000,
+            key + ' client'
+          );
+        } catch (_) {
+          clientRaw = null;
+        }
 
         const inbound = normalizeInbound(inboundRaw);
         const clientsInSettings = inbound?.settings?.clients || [];
-        console.log(
-          `Panel ${key} settings.clients count:`,
-          clientsInSettings.length
-        );
-
         const actualClient = findClient(inbound, email, clientRaw);
 
         if (!actualClient?.id) {
           errors.push(
-            `${key}: no UUID for ${email}. ` +
-              `apiId=${clientRaw?.id}, ` +
-              `settingsClients=${clientsInSettings.length}`
+            key +
+              ': no UUID for ' +
+              email +
+              ' (clients in inbound: ' +
+              clientsInSettings.length +
+              ')'
           );
           continue;
         }
 
         const link = buildVless(panel, inbound, actualClient);
-        console.log(`Built link for ${key}:`, link.slice(0, 100) + '...');
         output.push(link);
       } catch (err) {
-        console.error(`sub panel ${key}:`, err);
-        errors.push(`${key}: ${err.message || String(err)}`);
+        console.error('sub panel ' + key + ':', err);
+        errors.push(key + ': ' + (err.message || String(err)));
       }
     }
 
     if (!output.length) {
-      throw new Error(
+      // Soft error text for Happ (still 503 not opaque 500)
+      const msg =
         'No server links built. ' +
-          (errors.length ? errors.join(' | ') : 'Unknown error')
-      );
+        (errors.length ? errors.join(' | ') : 'Unknown error');
+      console.error(msg);
+      res.statusCode = 503;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end(msg);
+      return;
     }
 
     // --- Same traffic source as Mini App (/api/me) ---
@@ -303,11 +319,19 @@ export default async function handler(req, res) {
         expiryAt = sub.expiry_at || null;
         displayName = sub.display_name || displayName;
       }
-      const tr = await getTrafficForEmail(email);
-      up = tr.up;
-      down = tr.down;
+      try {
+        const tr = await withTimeout(
+          getTrafficForEmail(email),
+          6000,
+          'traffic'
+        );
+        up = tr.up;
+        down = tr.down;
+      } catch (te) {
+        console.warn('traffic skip', te.message);
+      }
     } catch (e) {
-      console.warn('sub traffic', e.message);
+      console.warn('sub traffic/db', e.message);
     }
 
     const userinfo = buildUserinfoHeader({
