@@ -2,6 +2,14 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/status",
+      "destination": "/worker.html"
+    },
+    {
+      "source": "/worker",
+      "destination": "/worker.html"
+    },
+    {
       "source": "/api/admin/set-payment",
       "destination": "/api/admin?action=set-payment"
     },

@@ -316,15 +316,34 @@ export default async function handler(req, res) {
       totalGb,
       expiryAt
     });
-    const titleHdr = profileTitleHeader(displayName);
+    // Always show "Destr Connect" in Happ (not user display name)
+    const titleHdr = profileTitleHeader('Destr Connect');
+    const statusUrl = (
+      process.env.STATUS_PAGE_URL ||
+      process.env.STATUS_URL ||
+      'https://shopdxs.online/worker'
+    ).replace(/\/$/, '');
+    const announce =
+      'Чтобы узнать, работает ли сейчас сервер, перейдите по ссылке — ' +
+      statusUrl;
 
-    const body = '#profile-title: ' + displayName + '\n' + output.join('\n');
+    const body =
+      '#profile-title: Destr Connect\n#announce: ' +
+      announce +
+      '\n' +
+      output.join('\n');
 
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('profile-title', titleHdr);
     res.setHeader('Profile-Title', titleHdr);
+    res.setHeader('announce', announce);
+    res.setHeader('Announce', announce);
+    res.setHeader('support-url', statusUrl);
+    res.setHeader('Support-Url', statusUrl);
+    res.setHeader('profile-web-page-url', statusUrl);
+    res.setHeader('Profile-Web-Page-Url', statusUrl);
     res.setHeader('subscription-userinfo', userinfo);
     res.setHeader('Subscription-Userinfo', userinfo);
     res.setHeader('profile-update-interval', '12');
@@ -332,7 +351,7 @@ export default async function handler(req, res) {
     // CORS-ish exposure for some clients
     res.setHeader(
       'Access-Control-Expose-Headers',
-      'Subscription-Userinfo, Profile-Title, Profile-Update-Interval'
+      'Subscription-Userinfo, Profile-Title, Profile-Update-Interval, Announce, Support-Url, Profile-Web-Page-Url'
     );
     res.end(body);
 
