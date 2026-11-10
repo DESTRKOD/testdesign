@@ -181,13 +181,34 @@ function buildVless(panel, inbound, client) {
     }
   }
 
-  const remark =
-    panel.name ||
-    inbound.remark ||
-    panel.server ||
-    'server';
+  // Happ shows only #fragment as server name — NEVER use host/URL here
+  const key = String(panel.key || panel.name || '').toLowerCase();
+  const byKey = {
+    de: '🇩🇪Германия',
+    ru: '🇷🇺Россия',
+    fi: '🇫🇮Финляндия',
+    nl: '🇳🇱Нидерланды',
+    us: '🇺🇸США'
+  };
+  let remark =
+    (panel.label && String(panel.label).trim()) ||
+    byKey[key] ||
+    null;
+  // if label looks like a host/url — ignore it
+  if (
+    remark &&
+    (/^https?:\/\//i.test(remark) ||
+      remark.includes('/') ||
+      /^[\d.]+$/.test(remark) ||
+      /\.(ru|com|online|app|dev)([/:]|$)/i.test(remark))
+  ) {
+    remark = byKey[key] || 'Server';
+  }
+  if (!remark) {
+    remark = byKey[key] || 'Server';
+  }
 
-  const name = encodeURIComponent(remark);
+  const name = encodeURIComponent(String(remark));
 
   return `vless://${uuid}@${address}:${port}?${q.toString()}#${name}`;
 }

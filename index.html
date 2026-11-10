@@ -3260,6 +3260,7 @@ async function adminLoadUsers(q) {
            '<button type="button" data-menu="paid">Оплачено</button>' +
            '<button type="button" data-menu="unpaid">Не оплачено</button>' +
            '<button type="button" data-menu="copy">Скопировать ссылку</button>' +
+           '<button type="button" data-menu="sync">Добавить на все сервера</button>' +
            '<button type="button" data-menu="block" class="danger">Выключить подписку</button>' +
            '<button type="button" data-menu="unblock">Включить подписку</button>')
         : ('<button type="button" data-menu="phone">Сменить номер</button>' +
@@ -3376,6 +3377,20 @@ document.getElementById('adm-user-list')?.addEventListener('click', async (e) =>
         const url = location.origin + '/api/sub?token=' + encodeURIComponent(token);
         try { await navigator.clipboard.writeText(url); alert('Ссылка скопирована'); }
         catch (_) { prompt('Ссылка:', url); }
+      } else if (act === 'sync') {
+        if (!confirm('Добавить эту подписку на все сервера (DE/RU/FI)?')) return;
+        const r = await adminFetch('/api/admin/subscription', {
+          action: 'sync',
+          userId: uid || undefined,
+          subscriptionId: subId || undefined
+        });
+        const lines = (r.results || []).map((x) => {
+          const pr = (x.panelResults || [])
+            .map((p) => p.name + ': ' + (p.ok ? 'ok' : p.error || 'fail'))
+            .join('; ');
+          return '#' + x.id + ' ' + (x.ok ? 'OK' : 'ERR') + ' — ' + pr;
+        });
+        alert(lines.join('\n') || 'Готово');
       } else if (act === 'block') {
         if (!confirm('Выключить подписку?')) return;
         await adminFetch('/api/admin/subscription', {

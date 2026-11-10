@@ -361,7 +361,71 @@ export default async function handler(req, res) {
     }
 
     /* ---------- DELETE ---------- */
-    if (action === 'delete') {
+    
+    /* ---------- SYNC panels (add missing servers e.g. FI to old subs) ---------- */
+    if (action === 'sync' || action === 'reprovision' || action === 'sync_panels') {
+      const subId = Number(body.subscriptionId || body.id || 0);
+      const userId = Number(body.userId || body.user_id || 0);
+      let rows = [];
+      if (subId) {
+        const r = await db.execute({
+          sql: 'SELECT * FROM subscriptions WHERE id = ?',
+          args: [subId]
+        });
+        rows = r.rows || [];
+      } else if (userId) {
+        const r = await db.execute({
+          sql: `SELECT * FROM subscriptions WHERE user_id = ? ORDER BY id DESC`,
+          args: [userId]
+        });
+        rows = r.rows || [];
+      } else if (body.all === true || body.syncAll === true) {
+        const r = await db.execute({
+          sql: `SELECT * FROM subscriptions WHERE status IS NULL OR status != 'deleted' ORDER BY id DESC LIMIT 500`
+        });
+        rows = r.rows || [];
+      }
+      if (!rows.length) {
+        return res.status(404).json({ ok: false, error: 'Subscription not found' });
+      }
+
+      const allResults = [];
+      for (const row of rows) {
+        const email = row.xui_email;
+        if (!email) {
+          allResults.push({ id: row.id, ok: false, error: 'no xui_email' });
+          continue;
+        }
+        let totalGB = Number(row.total_gb) || 0;
+        let expiryTime = 0;
+        if (row.expiry_at) {
+          const ms = new Date(row.expiry_at).getTime();
+          expiryTime = Number.isFinite(ms) ? ms : 0;
+        }
+        const enable = String(row.status || '') !== 'blocked';
+        const panelResults = await provisionOnPanels(email, {
+          totalGB,
+          expiryTime,
+          enable,
+          remark: row.display_name || email
+        });
+        const ok = panelResults.some((x) => x.ok);
+        allResults.push({
+          id: row.id,
+          email,
+          ok,
+          panelResults
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        synced: allResults.length,
+        results: allResults
+      });
+    }
+
+if (action === 'delete') {
       const subId = Number(body.subscriptionId || body.id);
       const userId = Number(body.userId || body.user_id);
       let row;
