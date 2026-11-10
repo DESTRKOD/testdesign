@@ -21,15 +21,15 @@ function expiryMs(days) {
 
 /** 3x-ui shows `email` as client name — readable + unique */
 function makeXuiEmail(displayName) {
-  // 3x-ui list shows this as client name — human label + short unique id
+  // 3x-ui "email" field = visible client name. Keep readable, ASCII-safe unique.
+  // No spaces/dots/middle-dots — they break some panel APIs.
   const base =
-    String(displayName || 'Подписка')
+    String(displayName || 'sub')
       .trim()
-      .replace(/\s+/g, ' ')
-      .slice(0, 48) || 'Подписка';
-  // keep readable Cyrillic/Latin; uniqueness via suffix
-  const short = crypto.randomBytes(2).toString('hex');
-  return base + ' · ' + short;
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9\u0400-\u04FF_\-]/g, '')
+      .slice(0, 40) || 'sub';
+  return base + '_' + crypto.randomBytes(3).toString('hex');
 }
 
 async function provisionOnPanels(
