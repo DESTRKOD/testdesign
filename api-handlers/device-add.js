@@ -1,5 +1,6 @@
 import { migrate, getDb } from '../lib/db.js';
 import { getSessionUser } from '../lib/auth.js';
+import { subscriptionUrlForToken } from '../lib/publicUrl.js';
 
 function getToken(req) {
   const auth = req.headers.authorization || '';
@@ -58,8 +59,7 @@ export default async function handler(req, res) {
       args: [sub.id, user.id, req.headers['user-agent'] || null, defaultName]
     });
 
-    const subUrl =
-      'https://sub.shopdxs.ru:67/api/sub?token=' + encodeURIComponent(sub.sub_token);
+    const subUrl = subscriptionUrlForToken(sub.sub_token);
 
     return res.status(200).json({
       ok: true,

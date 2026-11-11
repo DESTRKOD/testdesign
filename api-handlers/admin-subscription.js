@@ -8,6 +8,7 @@ import {
   getPanels
 } from '../lib/xui.js';
 import { makeToken } from '../lib/token.js';
+import { subscriptionUrlForToken } from '../lib/publicUrl.js';
 
 function gbToBytesPanel(gb) {
   return Number(gb) || 0;
@@ -71,13 +72,6 @@ async function provisionOnPanels(
   return results;
 }
 
-function requestOrigin(req) {
-  return (
-    (req.headers['x-forwarded-proto'] || 'https') +
-    '://' +
-    (req.headers['x-forwarded-host'] || req.headers.host || '')
-  );
-}
 
 function mapSub(row) {
   if (!row) return null;
@@ -223,9 +217,7 @@ export default async function handler(req, res) {
       });
 
       const subscriptionUrl =
-        requestOrigin(req) +
-        '/api/sub?token=' +
-        encodeURIComponent(subToken);
+        subscriptionUrlForToken(subToken);
 
       return res.status(200).json({
         ok: true,
@@ -496,9 +488,7 @@ if (action === 'delete') {
       let subscriptionUrl = null;
       if (row) {
         subscriptionUrl =
-          requestOrigin(req) +
-          '/api/sub?token=' +
-          encodeURIComponent(row.sub_token);
+          subscriptionUrlForToken(row.sub_token);
       }
       return res.status(200).json({
         ok: true,

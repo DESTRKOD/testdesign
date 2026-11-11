@@ -112,6 +112,11 @@
   <div class="err" id="err"></div>
 
 <script>
+window.__PUBLIC_SUB_URL = 'https://sub.shopdxs.ru';
+function publicSubUrl(token) {
+  return String(window.__PUBLIC_SUB_URL).replace(/\/$/, '') + '/api/sub?token=' + encodeURIComponent(token || '');
+}
+
 (function () {
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg) {
@@ -136,14 +141,14 @@
   const token = params.get('token') || '';
 
   if (!subUrl && token) {
-    subUrl = location.origin + '/api/sub?token=' + encodeURIComponent(token);
+    subUrl = publicSubUrl(token);
   }
 
   // legacy: path /add/TOKEN
   if (!subUrl && !token) {
     const parts = location.pathname.split('/').filter(Boolean);
     if (parts[0] === 'add' && parts[1]) {
-      subUrl = location.origin + '/api/sub?token=' + encodeURIComponent(parts[1]);
+      subUrl = publicSubUrl(parts[1]);
     }
   }
 

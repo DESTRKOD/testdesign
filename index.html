@@ -1525,7 +1525,16 @@
   </div>
 
 <script>
-window.__DESTR_BUILD = "2026-11-02-v13";
+
+/* Public sub domain — RF-friendly (not Vercel) */
+window.__PUBLIC_SUB_URL = window.__PUBLIC_SUB_URL || 'https://sub.shopdxs.ru';
+window.__PUBLIC_ADMIN_PATH = window.__PUBLIC_ADMIN_PATH || '/connect';
+function publicSubUrl(token) {
+  const base = String(window.__PUBLIC_SUB_URL || 'https://sub.shopdxs.ru').replace(/\/$/, '');
+  return base + '/api/sub?token=' + encodeURIComponent(token || '');
+}
+
+window.__DESTR_BUILD = "2026-11-11-sub1";
 console.log("Destr build", window.__DESTR_BUILD);
 /* ===== Lock zoom permanently ===== */
 (function () {
@@ -2786,7 +2795,7 @@ document.getElementById('btn-devices-happ')?.addEventListener('click', async () 
     const me = await API.me(getSession());
     const token = me.subscription?.subToken;
     if (!token) throw new Error('Нет подписки');
-    const subUrl = location.origin + '/api/sub?token=' + encodeURIComponent(token);
+    const subUrl = publicSubUrl(token);
     window.__lastSubUrl = subUrl;
     openInHapp(subUrl);
   } catch (e) {
@@ -3375,7 +3384,7 @@ document.getElementById('adm-user-list')?.addEventListener('click', async (e) =>
         alert(act === 'paid' ? 'Отмечено: оплачено' : 'Отмечено: не оплачено');
       } else if (act === 'copy') {
         if (!token) { alert('Нет токена'); return; }
-        const url = location.origin + '/api/sub?token=' + encodeURIComponent(token);
+        const url = publicSubUrl(token);
         try { await navigator.clipboard.writeText(url); alert('Ссылка скопирована'); }
         catch (_) { prompt('Ссылка:', url); }
       } else if (act === 'sync') {

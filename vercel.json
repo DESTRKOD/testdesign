@@ -2,6 +2,14 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/connect/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/connect",
+      "destination": "/index.html"
+    },
+    {
       "source": "/status",
       "destination": "/worker.html"
     },
