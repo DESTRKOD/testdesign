@@ -58,13 +58,8 @@ export default async function handler(req, res) {
       args: [sub.id, user.id, req.headers['user-agent'] || null, defaultName]
     });
 
-    const origin =
-      (req.headers['x-forwarded-proto'] || 'https') +
-      '://' +
-      (req.headers['x-forwarded-host'] || req.headers.host || '');
-
     const subUrl =
-      origin + '/api/sub?token=' + encodeURIComponent(sub.sub_token);
+      'https://sub.shopdxs.ru:67/api/sub?token=' + encodeURIComponent(sub.sub_token);
 
     return res.status(200).json({
       ok: true,
